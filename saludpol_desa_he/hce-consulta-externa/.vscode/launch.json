@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-HceConsultaExternaApplication<hce-consulta-externa>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.saludpol.hce.consultaexterna.HceConsultaExternaApplication",
+            "projectName": "hce-consulta-externa",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-HceConsultaExternaApplication<hce-consulta-externa>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "pe.gob.saludpol.hce.consultaexterna.HceConsultaExternaApplication",
+            "projectName": "hce-consulta-externa",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

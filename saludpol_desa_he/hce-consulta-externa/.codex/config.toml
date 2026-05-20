@@ -1,0 +1,25 @@
+# SonarQube MCP for this project.
+
+[mcp_servers.sonarqube]
+enabled = true
+command = "docker"
+args = [
+  "run",
+  "--init",
+  "--pull=always",
+  "-i",
+  "--rm",
+  "-e",
+  "SONARQUBE_TOKEN",
+  "-e",
+  "SONARQUBE_URL",
+  "-v",
+  "/Volumes/ssd/Proyectos/saludpol/S_SIMPLE/frontend:/app/mcp-workspace:rw",
+  "mcp/sonarqube",
+]
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+
+[mcp_servers.sonarqube.env]
+SONARQUBE_TOKEN = "sqa_1e69c962509908c9e64634312b86b553e24e8a9d"
+SONARQUBE_URL = "http://host.docker.internal:9000"

@@ -1,0 +1,48 @@
+.card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.allowOverflow {
+  overflow: visible;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--c-primary-faint);
+}
+
+.header.red {
+  background: var(--c-red-pale);
+  border-bottom-color: rgba(192, 0, 26, 0.2);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-primary);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.title-red {
+  color: var(--c-red);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.body {
+  padding: 16px 18px;
+}

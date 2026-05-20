@@ -1,0 +1,107 @@
+.helperRow {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.helperText {
+	font-size: 11.5px;
+	color: var(--text-muted);
+	max-width: 720px;
+}
+
+.helperMeta {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 11.5px;
+	color: var(--text-mid);
+	white-space: nowrap;
+}
+
+.loadingState {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--c-primary);
+	font-weight: 600;
+}
+
+.resultsSection {
+	margin-top: 14px;
+}
+
+.resultsHeader {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.resultsTitle {
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--c-primary);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.resultsHint {
+	font-size: 11px;
+	color: var(--text-light);
+}
+
+.tableWrap {
+	border: 1px solid var(--border-light);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.clickableRow {
+	cursor: pointer;
+}
+
+.selectedRow td {
+	background: rgba(25, 118, 210, 0.08) !important;
+}
+
+.selectedRow:hover td {
+	background: rgba(25, 118, 210, 0.1) !important;
+}
+
+.mono {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+.patientCell {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.patientName {
+	font-weight: 600;
+	color: var(--text-mid);
+}
+
+.patientMeta {
+	font-size: 10.5px;
+	color: var(--text-light);
+}
+
+@media (max-width: 900px) {
+	.helperRow,
+	.resultsHeader {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.helperMeta {
+		white-space: normal;
+		flex-wrap: wrap;
+	}
+}

@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-HceFiliacionApplication<hce-filiacion>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.saludpol.hce.filiacion.HceFiliacionApplication",
+            "projectName": "hce-filiacion",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-HceFiliacionApplication<hce-filiacion>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "pe.gob.saludpol.hce.filiacion.HceFiliacionApplication",
+            "projectName": "hce-filiacion",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
