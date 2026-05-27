@@ -1,10 +1,27 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getResumen, guardarMotivo, guardarAntPersonal, guardarAntFamiliares,
   guardarRevisionSistemas, guardarExamenFisico, guardarListaProblemas,
   guardarDiagnosticos, guardarTratamientos, guardarSolicitudesApoyo,
-  guardarDecisionClinica,
+  guardarDecisionClinica, iniciarConsultaExterna, listarConsultasCE,
 } from '@/api/consultaExterna'
 import { useResumenResource, useSaveResource } from '@/hooks/consultaShared'
+
+export function useListarConsultasCE(admisionId) {
+  return useQuery({
+    queryKey: ['ce-lista', admisionId],
+    queryFn: () => listarConsultasCE(admisionId),
+    enabled: !!admisionId,
+  })
+}
+
+export function useIniciarConsultaExterna(admisionId) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data) => iniciarConsultaExterna(admisionId, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ce-lista', admisionId] }),
+  })
+}
 
 export function useResumenCE(atencionId) {
   return useResumenResource('ce-resumen', atencionId, getResumen)

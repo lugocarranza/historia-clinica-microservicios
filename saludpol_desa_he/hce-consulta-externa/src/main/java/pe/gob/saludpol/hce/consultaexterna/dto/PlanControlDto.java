@@ -10,6 +10,7 @@ import java.util.List;
 
 public record PlanControlDto(
         @Valid List<@Valid MedPlanControlDto> medicacion,
+        @Valid List<@Valid SolicitudApoyoDto> solicitudesApoyo,
         @NotNull(message = "La proxima cita es requerida")
         @FutureOrPresent(message = "La proxima cita no puede ser una fecha pasada")
         LocalDate proximaCita,

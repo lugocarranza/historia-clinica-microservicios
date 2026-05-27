@@ -52,4 +52,7 @@ public class DecisionClinica extends AuditableEntity {
 
     @Column(name = "V_FIRMA_DIGITAL", length = 100)
     private String firmaDigital;
+
+    @Column(name = "V_IPRESS_CUI", length = 20)
+    private String ipressCui;
 }

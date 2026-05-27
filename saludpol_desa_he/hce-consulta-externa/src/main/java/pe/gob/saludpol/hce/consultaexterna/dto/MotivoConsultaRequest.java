@@ -5,6 +5,9 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record MotivoConsultaRequest(
+        @Size(max = 30, message = "La OAP no debe superar 30 caracteres")
+        String oapEpisodio,
+
         @NotBlank(message = "El motivo de consulta es requerido")
         @Size(max = 500)
         String motivo,

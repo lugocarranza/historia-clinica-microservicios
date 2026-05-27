@@ -7,6 +7,9 @@ import FormField from '@/components/ui/FormField'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { todayDateInput } from '@/utils/date'
+import { useAuthStore } from '@/store/authStore'
+import { useIpressFromUser } from '@/hooks/useIpressFromUser'
+import { useProfesionalSalud } from '@/hooks/useProfesionalSalud'
 
 const OPCIONES_ALTA = ['Alta con cita', 'Alta sin cita', 'Hospitalización', 'Referencia', 'Contra-referencia', 'Emergencia']
 
@@ -20,26 +23,35 @@ const MAX_LENGTHS = {
   // firmaDigital: 100,
 }
 
-const getDefaultValues = (data) => ({
+const buildMedicoNombre = (user) => {
+  if (!user) return ''
+  return `${user.apellidoPaterno || ''} ${user.apellidoMaterno || ''} ${user.nombres || ''}`.trim().toUpperCase()
+}
+
+const getDefaultValues = (data, user, ipressData, profesional) => ({
   decisionAlta: data?.decisionAlta || '',
   fechaProximaCita: data?.fechaProximaCita || '',
   especialidadRef: data?.especialidadRef || '',
   planManejo: data?.planManejo || '',
   pronostico: data?.pronostico || '',
   observaciones: data?.observaciones || '',
-  medicoNombre: data?.medicoNombre || '',
-  medicoCmp: data?.medicoCmp || '',
-  // firmaDigital: data?.firmaDigital || '',
+  medicoNombre: data?.medicoNombre || buildMedicoNombre(user),
+  medicoCmp: data?.medicoCmp || profesional?.numeroColegiatura || '',
+  ipressCui: data?.ipressCui || ipressData?.ipressCui || '',
 })
 
 export default function TabDecisionClinica({ onSave, saves, initialData, isReadOnly = false }) {
   const minDate = todayDateInput()
   const [pendingData, setPendingData] = useState(null)
+  const { user } = useAuthStore()
+  const ipressData = useIpressFromUser()
+  const { data: profesionalData } = useProfesionalSalud()
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -49,15 +61,17 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
       planManejo: '',
       pronostico: '',
       observaciones: '',
-      medicoNombre: '',
+      medicoNombre: buildMedicoNombre(user),
       medicoCmp: '',
-      firmaDigital: '',
+      ipressCui: '',
     },
   })
 
+  const decisionAlta = watch('decisionAlta')
+
   useEffect(() => {
-    reset(getDefaultValues(initialData))
-  }, [initialData, reset])
+    reset(getDefaultValues(initialData, user, ipressData, profesionalData))
+  }, [initialData, user, ipressData, profesionalData, reset])
 
   const onSubmit = (data) => {
     if (isReadOnly) return
@@ -85,7 +99,7 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
         <CardHeader title="Conducta y Plan" />
         <CardBody>
           <div className="form-grid g3" style={{ marginBottom: 12 }}>
-            <FormField label="Decisión de Alta" error={errors.decisionAlta?.message}>
+            <FormField label="Decisión de Alta" error={errors.decisionAlta?.message} required>
               <Select {...register('decisionAlta', { required: 'La decisión de alta es obligatoria' })} disabled={isReadOnly}>
                 <option value="">— Seleccionar —</option>
                 {OPCIONES_ALTA.map((o) => <option key={o}>{o}</option>)}
@@ -96,17 +110,16 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
                 type="date"
                 min={minDate}
                 {...register('fechaProximaCita', {
-                  required: 'La fecha es obligatoria',
-                  validate: (value) => (
-                    value && value < minDate
-                      ? 'La fecha de próxima cita no puede ser una fecha pasada'
-                      : true
-                  ),
+                  validate: (value) => {
+                    const errorRequerido = decisionAlta === 'Alta con cita' && !value ? 'La fecha de próxima cita es obligatoria para Alta con cita' : null
+                    const errorPasado = value && value < minDate ? 'La fecha de próxima cita no puede ser una fecha pasada' : null
+                    return errorRequerido || errorPasado || true
+                  },
                 })}
                 disabled={isReadOnly}
               />
             </FormField>
-            <FormField label="Especialidad de Referencia" error={errors.especialidadRef?.message}>
+            <FormField label="Especialidad de Referencia" error={errors.especialidadRef?.message} required>
               <Input
                 {...register('especialidadRef', {
                   required: 'La especialidad es obligatoria',
@@ -122,7 +135,7 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
             </FormField>
           </div>
           <div className="form-grid" style={{ gap: 10 }}>
-            <FormField label="Plan de Manejo" error={errors.planManejo?.message}>
+            <FormField label="Plan de Manejo" error={errors.planManejo?.message} required>
               <Textarea
                 rows={3}
                 {...register('planManejo', {
@@ -137,7 +150,7 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
                 disabled={isReadOnly}
               />
             </FormField>
-            <FormField label="Pronóstico" error={errors.pronostico?.message}>
+            <FormField label="Pronóstico" error={errors.pronostico?.message} required>
               <Textarea
                 rows={2}
                 {...register('pronostico', {
@@ -152,7 +165,7 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
                 disabled={isReadOnly}
               />
             </FormField>
-            <FormField label="Observaciones Finales" error={errors.observaciones?.message}>
+            <FormField label="Observaciones Finales" error={errors.observaciones?.message} required>
               <Textarea
                 rows={2}
                 {...register('observaciones', {
@@ -175,7 +188,7 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
         <CardHeader title="Validación del Médico" />
         <CardBody>
           <div className="form-grid g3">
-            <FormField label="Médico Responsable" error={errors.medicoNombre?.message}>
+            <FormField label="Médico Responsable" error={errors.medicoNombre?.message} required>
               <Input
                 {...register('medicoNombre', {
                   required: 'El médico responsable es requerido',
@@ -183,25 +196,18 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
                     value: MAX_LENGTHS.medicoNombre,
                     message: `El médico responsable no debe superar ${MAX_LENGTHS.medicoNombre} caracteres`,
                   },
-                  pattern: {
-                    value: /^[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]+$/,
-                    message: 'El nombre del médico solo puede contener letras y espacios',
-                  },
-                  onChange: (e) => {
-                    e.target.value = e.target.value.replaceAll(/[^A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]/g, '')
-                  },
                 })}
                 maxLength={MAX_LENGTHS.medicoNombre}
                 placeholder="Apellidos y Nombres"
-                disabled={isReadOnly}
+                disabled
               />
             </FormField>
-            <FormField label="CMP / N° Colegiatura" error={errors.medicoCmp?.message}>
+            <FormField label="CMP / N° Colegiatura" error={errors.medicoCmp?.message} required>
               <Input
                 {...profCmpRegister}
                 maxLength={MAX_LENGTHS.medicoCmp}
                 placeholder="000000"
-                disabled={isReadOnly}
+                disabled={isReadOnly || !!profesionalData}
                 onChange={(event) => {
                   const soloDigitos = event.target.value.replaceAll(/\D/g, '').slice(0, 8)
                   event.target.value = soloDigitos
@@ -209,20 +215,9 @@ export default function TabDecisionClinica({ onSave, saves, initialData, isReadO
                 }}
               />
             </FormField>
-            {/* <FormField label="Firma Digital" error={errors.firmaDigital?.message}>
-              <Input
-                {...register('firmaDigital', {
-                  required: 'La firma digital es requerida',
-                  maxLength: {
-                    value: MAX_LENGTHS.firmaDigital,
-                    message: `La firma digital no debe superar ${MAX_LENGTHS.firmaDigital} caracteres`,
-                  },
-                })}
-                maxLength={MAX_LENGTHS.firmaDigital}
-                placeholder="Código de validación"
-                disabled={isReadOnly}
-              />
-            </FormField> */}
+            <FormField hidden label="CUI IPRESS">
+              <Input {...register('ipressCui')} disabled placeholder="Cargando..." />
+            </FormField>
           </div>
         </CardBody>
       </Card>

@@ -3,10 +3,16 @@
   max-width: 380px;
 }
 
+.dniFieldWrap {
+	min-width: 0;
+	flex: 1;
+}
+
 .searchField {
   display: flex;
   gap: 6px;
   align-items: center;
+	min-width: 0;
 }
 
 .searchField input {
@@ -44,4 +50,51 @@
 
 .blockTitleGreen {
   color: #166534;
+}
+
+@media (max-width: 900px) {
+  .searchRow {
+    max-width: none;
+  }
+
+  .searchField {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchField button {
+    width: 100%;
+  }
+
+  .dniFieldWrap {
+    width: 100%;
+  }
+
+  :global(.page-top) {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  :global(.page-actions) {
+    width: 100%;
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  :global(.page-actions > button) {
+    flex: 1 1 0;
+  }
+
+  :global(.form-grid.g3),
+  :global(.form-grid.g4) {
+    grid-template-columns: 1fr;
+  }
+
+  :global(.span2) {
+    grid-column: auto;
+  }
+
+  :global(.page) {
+    padding: 8px;
+  }
 }

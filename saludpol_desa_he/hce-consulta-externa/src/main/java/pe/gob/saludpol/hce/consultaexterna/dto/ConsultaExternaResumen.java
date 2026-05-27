@@ -5,6 +5,7 @@ import java.util.List;
 public record ConsultaExternaResumen(
         Long atencionId,
         String atencionEstado,
+        String servicio,
         MotivoConsultaResponse motivo,
         AntPersonalRequest antPersonal,
         List<AntFamiliarDto> antFamiliares,

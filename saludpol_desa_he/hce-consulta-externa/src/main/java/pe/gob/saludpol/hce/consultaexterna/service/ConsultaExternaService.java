@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,38 +37,44 @@ public class ConsultaExternaService {
     private final SolicitudApoyoRepository solicitudApoyoRepository;
     private final DecisionClinicaRepository decisionClinicaRepository;
 
-    private Atencion resolverAtencionCE(Long admisionId) {
+    // ── Initiation / listing ────────────────────────────────────────────────
+
+    @Transactional
+    public AtencionResponse iniciarConsultaExterna(Long admisionId, IniciarCERequest request) {
         AdmisionClientDto admision;
         try {
             admision = filiacionClient.obtenerAdmision(admisionId).data();
         } catch (FeignException.NotFound e) {
             throw new EntityNotFoundException("Admision no encontrada con id: " + admisionId);
         }
-        Atencion at = atencionRepository.findByAdmisionIdAndTipoAtencion(admisionId, "CE")
-                .orElseGet(Atencion::new);
-        if (at.getId() == null) {
-            at.setAdmisionId(admisionId);
-            at.setHistoriaClinicaId(admision.historiaClinicaId());
-            at.setTipoAtencion("CE");
-            at.setFechaAtencion(admision.fechaAtencion());
-            atencionRepository.save(at);
-        }
-        if ("ANULADA".equals(at.getEstado())) {
-            throw new EntityUnprocessableException("La atencion se encuentra anulada");
-        }
-        if ("COMPLETADA".equals(at.getEstado())) {
-            throw new EntityUnprocessableException("La atencion se encuentra completada y no permite edicion");
-        }
-        return at;
+        Atencion at = new Atencion();
+        at.setAdmisionId(admisionId);
+        at.setTipoAtencion("CE");
+        at.setFechaAtencion(admision.fechaAtencion());
+        at.setServicio(request.servicio());
+        at.setDniPaciente(request.dniPaciente());
+        at.setIpressCui(request.ipressCui());
+        return toAtencionResponse(atencionRepository.save(at));
     }
 
+    @Transactional(readOnly = true)
+    public List<AtencionResponse> listarConsultasCE(Long admisionId) {
+        return atencionRepository
+                .findByAdmisionIdAndTipoAtencionOrderByFechaAtencionDesc(admisionId, "CE")
+                .stream()
+                .map(this::toAtencionResponse)
+                .toList();
+    }
+
+    // ── Atencion-scoped operations ──────────────────────────────────────────
+
     @Transactional
-    public MotivoConsultaResponse guardarMotivo(Long admisionId, MotivoConsultaRequest request) {
-        Atencion atencion = resolverAtencionCE(admisionId);
-        Long atencionId = atencion.getId();
+    public MotivoConsultaResponse guardarMotivo(Long atencionId, MotivoConsultaRequest request) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         MotivoConsulta motivo = motivoRepository.findByAtencionId(atencionId)
                 .orElseGet(MotivoConsulta::new);
         motivo.setAtencion(atencion);
+        motivo.setOapEpisodio(request.oapEpisodio());
         motivo.setMotivo(request.motivo());
         motivo.setTiempoEnfermedad(request.tiempoEnfermedad());
         motivo.setFormaInicio(request.formaInicio());
@@ -80,17 +88,13 @@ public class ConsultaExternaService {
     }
 
     @Transactional(readOnly = true)
-    public MotivoConsultaResponse obtenerMotivo(Long admisionId) {
-        Long atencionId = atencionRepository.findByAdmisionIdAndTipoAtencion(admisionId, "CE")
-                .map(Atencion::getId).orElse(null);
-        if (atencionId == null) return null;
+    public MotivoConsultaResponse obtenerMotivo(Long atencionId) {
         return motivoRepository.findByAtencionId(atencionId).map(this::toMotivoResponse).orElse(null);
     }
 
     @Transactional
-    public void guardarAntPersonal(Long admisionId, AntPersonalRequest request) {
-        Atencion atencion = resolverAtencionCE(admisionId);
-        Long atencionId = atencion.getId();
+    public void guardarAntPersonal(Long atencionId, AntPersonalRequest request) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         AntPersonal ant = antPersonalRepository.findByAtencionId(atencionId)
                 .orElseGet(AntPersonal::new);
         ant.setAtencion(atencion);
@@ -99,12 +103,12 @@ public class ConsultaExternaService {
     }
 
     @Transactional
-    public void guardarAntFamiliares(Long admisionId, List<AntFamiliarDto> dtos) {
-        Atencion atencion = resolverAtencionCE(admisionId);
+    public void guardarAntFamiliares(Long atencionId, List<AntFamiliarDto> dtos) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         for (AntFamiliarDto dto : dtos) {
-            AntFamiliar entity = dto.id() != null
-                    ? antFamiliarRepository.findById(dto.id()).orElseGet(AntFamiliar::new)
-                    : new AntFamiliar();
+            AntFamiliar entity = antFamiliarRepository
+                    .findTopByAtencionIdAndEnfermedadOrderByIdDesc(atencionId, dto.enfermedad())
+                    .orElseGet(AntFamiliar::new);
             entity.setAtencion(atencion);
             entity.setEnfermedad(dto.enfermedad());
             entity.setPadre(dto.padre());
@@ -118,12 +122,12 @@ public class ConsultaExternaService {
     }
 
     @Transactional
-    public void guardarRevisionSistemas(Long admisionId, List<RevisionSistemaDto> dtos) {
-        Atencion atencion = resolverAtencionCE(admisionId);
+    public void guardarRevisionSistemas(Long atencionId, List<RevisionSistemaDto> dtos) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         for (RevisionSistemaDto dto : dtos) {
-            RevisionSistema entity = dto.id() != null
-                    ? revisionSistemaRepository.findById(dto.id()).orElseGet(RevisionSistema::new)
-                    : new RevisionSistema();
+            RevisionSistema entity = revisionSistemaRepository
+                    .findTopByAtencionIdAndSistemaAndSintomaOrderByIdDesc(atencionId, dto.sistema(), dto.sintoma())
+                    .orElseGet(RevisionSistema::new);
             entity.setAtencion(atencion);
             entity.setSistema(dto.sistema());
             entity.setSintoma(dto.sintoma());
@@ -134,9 +138,8 @@ public class ConsultaExternaService {
     }
 
     @Transactional
-    public ExamenFisicoResponse guardarExamenFisico(Long admisionId, ExamenFisicoRequest request) {
-        Atencion atencion = resolverAtencionCE(admisionId);
-        Long atencionId = atencion.getId();
+    public ExamenFisicoResponse guardarExamenFisico(Long atencionId, ExamenFisicoRequest request) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         ExamenFisico ef = examenFisicoRepository.findByAtencionId(atencionId)
                 .orElseGet(ExamenFisico::new);
         ef.setAtencion(atencion);
@@ -162,23 +165,9 @@ public class ConsultaExternaService {
         return toExamenFisicoResponse(examenFisicoRepository.save(ef));
     }
 
-    private BigDecimal calcularImc(BigDecimal peso, BigDecimal tallaCm) {
-        if (peso == null || tallaCm == null || tallaCm.compareTo(BigDecimal.ZERO) <= 0) {
-            return null;
-        }
-
-        BigDecimal tallaMetros = tallaCm.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
-        BigDecimal denominador = tallaMetros.multiply(tallaMetros);
-        if (denominador.compareTo(BigDecimal.ZERO) <= 0) {
-            return null;
-        }
-
-        return peso.divide(denominador, 2, RoundingMode.HALF_UP);
-    }
-
     @Transactional
-    public void guardarListaProblemas(Long admisionId, List<ListaProblemaDto> dtos) {
-        Atencion atencion = resolverAtencionCE(admisionId);
+    public void guardarListaProblemas(Long atencionId, List<ListaProblemaDto> dtos) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         for (ListaProblemaDto dto : dtos) {
             ListaProblema entity = dto.id() != null
                     ? listaProblemaRepository.findById(dto.id()).orElseGet(ListaProblema::new)
@@ -193,8 +182,8 @@ public class ConsultaExternaService {
     }
 
     @Transactional
-    public void guardarDiagnosticos(Long admisionId, List<DiagnosticoDto> dtos) {
-        Atencion atencion = resolverAtencionCE(admisionId);
+    public void guardarDiagnosticos(Long atencionId, List<DiagnosticoDto> dtos) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         for (DiagnosticoDto dto : dtos) {
             Diagnostico entity = dto.id() != null
                     ? diagnosticoRepository.findById(dto.id()).orElseGet(Diagnostico::new)
@@ -210,9 +199,8 @@ public class ConsultaExternaService {
     }
 
     @Transactional
-    public void guardarTratamientos(Long admisionId, List<TratamientoDto> dtos, String indicacionesNoFarm) {
-        Atencion atencion = resolverAtencionCE(admisionId);
-        Long atencionId = atencion.getId();
+    public void guardarTratamientos(Long atencionId, List<TratamientoDto> dtos, String indicacionesNoFarm) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         for (TratamientoDto dto : dtos) {
             Tratamiento entity = dto.id() != null
                     ? tratamientoRepository.findById(dto.id()).orElseGet(Tratamiento::new)
@@ -244,8 +232,8 @@ public class ConsultaExternaService {
     }
 
     @Transactional
-    public void guardarSolicitudesApoyo(Long admisionId, List<SolicitudApoyoDto> dtos) {
-        Atencion atencion = resolverAtencionCE(admisionId);
+    public void guardarSolicitudesApoyo(Long atencionId, List<SolicitudApoyoDto> dtos) {
+        Atencion atencion = findAtencionCEEditable(atencionId);
         for (SolicitudApoyoDto dto : dtos) {
             SolicitudApoyo entity = dto.id() != null
                     ? solicitudApoyoRepository.findById(dto.id()).orElseGet(SolicitudApoyo::new)
@@ -255,14 +243,20 @@ public class ConsultaExternaService {
             entity.setDescripcion(dto.descripcion());
             entity.setPrioridad(dto.prioridad());
             entity.setObservaciones(dto.observaciones());
+            entity.setIdSubTipoParent(dto.idSubTipoParent());
+            entity.setIdSubTipoUltimo(dto.idSubTipoUltimo());
+            entity.setCodigoCpms(dto.codigoCpms());
+            entity.setCodigoSegus(dto.codigoSegus());
             solicitudApoyoRepository.save(entity);
         }
     }
 
     @Transactional
-    public void guardarDecisionClinica(Long admisionId, DecisionClinicaRequest request) {
-        Atencion atencion = resolverAtencionCE(admisionId);
-        Long atencionId = atencion.getId();
+    public void guardarDecisionClinica(Long atencionId, DecisionClinicaRequest request) {
+        if ("Alta con cita".equals(request.decisionAlta()) && request.fechaProximaCita() == null) {
+            throw new IllegalArgumentException("La fecha de proxima cita es obligatoria para Alta con cita");
+        }
+        Atencion atencion = findAtencionCEEditable(atencionId);
         DecisionClinica dec = decisionClinicaRepository.findByAtencionId(atencionId)
                 .orElseGet(DecisionClinica::new);
         dec.setAtencion(atencion);
@@ -274,29 +268,38 @@ public class ConsultaExternaService {
         dec.setObservaciones(request.observaciones());
         dec.setMedicoNombre(request.medicoNombre());
         dec.setMedicoCmp(request.medicoCmp());
+        dec.setIpressCui(request.ipressCui());
         decisionClinicaRepository.save(dec);
         completarAtencion(atencion);
     }
 
     @Transactional(readOnly = true)
-    public ConsultaExternaResumen obtenerResumen(Long admisionId) {
-        Atencion atencion = atencionRepository.findByAdmisionIdAndTipoAtencion(admisionId, "CE")
-                .orElse(null);
+    public ConsultaExternaResumen obtenerResumen(Long atencionId) {
+        Atencion atencion = atencionRepository.findById(atencionId).orElse(null);
         if (atencion == null) {
-            return new ConsultaExternaResumen(null, null, null, null,
+            return new ConsultaExternaResumen(null, null, null, null, null,
                     List.of(), List.of(), null, List.of(), List.of(),
                     List.of(), null, List.of(), null);
         }
-        Long atencionId = atencion.getId();
         MotivoConsultaResponse motivo = motivoRepository.findByAtencionId(atencionId)
                 .map(this::toMotivoResponse).orElse(null);
         AntPersonalRequest antPersonal = antPersonalRepository.findByAtencionId(atencionId)
             .map(this::toAntPersonalRequest)
             .orElse(null);
-        List<AntFamiliarDto> antFam = antFamiliarRepository.findByAtencionId(atencionId)
-                .stream().map(this::toAntFamiliarDto).toList();
-        List<RevisionSistemaDto> revSist = revisionSistemaRepository.findByAtencionId(atencionId)
-                .stream().map(this::toRevSistemaDto).toList();
+        Map<String, AntFamiliar> antFamMap = new LinkedHashMap<>();
+        antFamiliarRepository.findByAtencionId(atencionId).forEach(a -> {
+            AntFamiliar existing = antFamMap.get(a.getEnfermedad());
+            if (existing == null || a.getId() > existing.getId()) antFamMap.put(a.getEnfermedad(), a);
+        });
+        List<AntFamiliarDto> antFam = antFamMap.values().stream().map(this::toAntFamiliarDto).toList();
+
+        Map<String, RevisionSistema> revSistMap = new LinkedHashMap<>();
+        revisionSistemaRepository.findByAtencionId(atencionId).forEach(r -> {
+            String key = r.getSistema() + "__" + r.getSintoma();
+            RevisionSistema existing = revSistMap.get(key);
+            if (existing == null || r.getId() > existing.getId()) revSistMap.put(key, r);
+        });
+        List<RevisionSistemaDto> revSist = revSistMap.values().stream().map(this::toRevSistemaDto).toList();
         ExamenFisicoResponse exFis = examenFisicoRepository.findByAtencionId(atencionId)
                 .map(this::toExamenFisicoResponse).orElse(null);
         List<ListaProblemaDto> listaProb = listaProblemaRepository
@@ -313,13 +316,103 @@ public class ConsultaExternaService {
                 .stream().map(this::toSolicitudDto).toList();
         DecisionClinicaRequest dec = decisionClinicaRepository.findByAtencionId(atencionId)
                 .map(this::toDecisionRequest).orElse(null);
-        return new ConsultaExternaResumen(atencionId, atencion.getEstado(), motivo, antPersonal,
-            antFam, revSist, exFis, listaProb, diags, tratas, indicacionesNoFarm, solic, dec);
+        return new ConsultaExternaResumen(atencionId, atencion.getEstado(), atencion.getServicio(),
+            motivo, antPersonal, antFam, revSist, exFis, listaProb, diags, tratas,
+            indicacionesNoFarm, solic, dec);
+    }
+
+    // ── Private helpers ────────────────────────────────────────────────────
+
+    private Atencion findAtencionCEEditable(Long atencionId) {
+        Atencion at = atencionRepository.findById(atencionId)
+                .orElseThrow(() -> new EntityNotFoundException("Atencion no encontrada con id: " + atencionId));
+        if ("ANULADA".equals(at.getEstado())) {
+            throw new EntityUnprocessableException("La atencion se encuentra anulada");
+        }
+        if ("COMPLETADA".equals(at.getEstado())) {
+            throw new EntityUnprocessableException("La atencion se encuentra completada y no permite edicion");
+        }
+        return at;
     }
 
     private void completarAtencion(Atencion atencion) {
         atencion.setEstado("COMPLETADA");
         atencionRepository.save(atencion);
+    }
+
+    private BigDecimal calcularImc(BigDecimal peso, BigDecimal tallaCm) {
+        if (peso == null || tallaCm == null || tallaCm.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        BigDecimal tallaMetros = tallaCm.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+        BigDecimal denominador = tallaMetros.multiply(tallaMetros);
+        if (denominador.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        return peso.divide(denominador, 2, RoundingMode.HALF_UP);
+    }
+
+    private AtencionResponse toAtencionResponse(Atencion a) {
+        return new AtencionResponse(
+                a.getId(), a.getAdmisionId(),
+                a.getTipoAtencion(), a.getFechaAtencion(),
+                a.getServicio(), a.getDniPaciente(), a.getCeAtencionId(),
+                a.getEstado(), a.getCreatedAt());
+    }
+
+    private MotivoConsultaResponse toMotivoResponse(MotivoConsulta m) {
+        return new MotivoConsultaResponse(m.getId(), m.getAtencion().getId(),
+                m.getOapEpisodio(),
+                m.getMotivo(), m.getTiempoEnfermedad(), m.getFormaInicio(), m.getCurso(),
+                m.getEnfermedadActual(), m.getSintomasSignos(), m.getRelatoCronologico(),
+                m.getFactoresMod(), m.getTratamientosPrevios());
+    }
+
+    private ExamenFisicoResponse toExamenFisicoResponse(ExamenFisico ef) {
+        List<ExamenRegionDto> regiones = ef.getRegiones().stream()
+                .map(r -> new ExamenRegionDto(r.getRegion(), r.getHallazgos()))
+                .toList();
+        return new ExamenFisicoResponse(ef.getId(), ef.getAtencion().getId(),
+                ef.getPaSistolica(), ef.getPaDiastolica(), ef.getFc(), ef.getFr(), ef.getTemperatura(),
+                ef.getSatO2(), ef.getPeso(), ef.getTalla(), ef.getImc(), regiones);
+    }
+
+    private AntFamiliarDto toAntFamiliarDto(AntFamiliar a) {
+        return new AntFamiliarDto(a.getId(), a.getEnfermedad(), a.getPadre(), a.getMadre(),
+                a.getHermanos(), a.getAbuelos(), a.getOtros(), a.getObservaciones());
+    }
+
+    private RevisionSistemaDto toRevSistemaDto(RevisionSistema r) {
+        return new RevisionSistemaDto(r.getId(), r.getSistema(), r.getSintoma(), r.getPresente(), r.getObservacion());
+    }
+
+    private ListaProblemaDto toListaProblemaDto(ListaProblema lp) {
+        return new ListaProblemaDto(lp.getId(), lp.getNroProblema(), lp.getDescripcion(),
+                lp.getEstado(), lp.getFechaIdentificacion());
+    }
+
+    private DiagnosticoDto toDiagnosticoDto(Diagnostico d) {
+        return new DiagnosticoDto(
+                d.getId(),
+                d.getCodigoCie10(), d.getDescripcion(), d.getTipo(),
+                d.getCaso(), d.getNroProblemAsoc());
+    }
+
+    private TratamientoDto toTratamientoDto(Tratamiento t) {
+        return new TratamientoDto(t.getId(), t.getCodigo(), t.getMedicamento(), t.getDosis(), t.getVia(),
+                t.getFrecuencia(), t.getDuracion(), t.getIndicaciones());
+    }
+
+    private SolicitudApoyoDto toSolicitudDto(SolicitudApoyo s) {
+        return new SolicitudApoyoDto(s.getId(), s.getTipo(), s.getDescripcion(), s.getPrioridad(), s.getObservaciones(),
+                s.getIdSubTipoParent(), s.getIdSubTipoUltimo(), s.getCodigoCpms(), s.getCodigoSegus());
+    }
+
+    private DecisionClinicaRequest toDecisionRequest(DecisionClinica d) {
+        return new DecisionClinicaRequest(d.getDecisionAlta(), d.getFechaProximaCita(),
+                d.getEspecialidadRef(), d.getPlanManejo(), d.getPronostico(),
+                d.getObservaciones(), d.getMedicoNombre(), d.getMedicoCmp(),
+                d.getIpressCui());
     }
 
     private void mapAntPersonal(AntPersonalRequest request, AntPersonal ant) {
@@ -430,58 +523,6 @@ public class ConsultaExternaService {
         ant.setGineco(g);
     }
 
-    private MotivoConsultaResponse toMotivoResponse(MotivoConsulta m) {
-        return new MotivoConsultaResponse(m.getId(), m.getAtencion().getId(),
-                m.getMotivo(), m.getTiempoEnfermedad(), m.getFormaInicio(), m.getCurso(),
-                m.getEnfermedadActual(), m.getSintomasSignos(), m.getRelatoCronologico(),
-                m.getFactoresMod(), m.getTratamientosPrevios());
-    }
-
-    private ExamenFisicoResponse toExamenFisicoResponse(ExamenFisico ef) {
-        List<ExamenRegionDto> regiones = ef.getRegiones().stream()
-                .map(r -> new ExamenRegionDto(r.getRegion(), r.getHallazgos()))
-                .toList();
-        return new ExamenFisicoResponse(ef.getId(), ef.getAtencion().getId(),
-                ef.getPaSistolica(), ef.getPaDiastolica(), ef.getFc(), ef.getFr(), ef.getTemperatura(),
-                ef.getSatO2(), ef.getPeso(), ef.getTalla(), ef.getImc(), regiones);
-    }
-
-    private AntFamiliarDto toAntFamiliarDto(AntFamiliar a) {
-        return new AntFamiliarDto(a.getId(), a.getEnfermedad(), a.getPadre(), a.getMadre(),
-                a.getHermanos(), a.getAbuelos(), a.getOtros(), a.getObservaciones());
-    }
-
-    private RevisionSistemaDto toRevSistemaDto(RevisionSistema r) {
-        return new RevisionSistemaDto(r.getId(), r.getSistema(), r.getSintoma(), r.getPresente(), r.getObservacion());
-    }
-
-    private ListaProblemaDto toListaProblemaDto(ListaProblema lp) {
-        return new ListaProblemaDto(lp.getId(), lp.getNroProblema(), lp.getDescripcion(),
-                lp.getEstado(), lp.getFechaIdentificacion());
-    }
-
-    private DiagnosticoDto toDiagnosticoDto(Diagnostico d) {
-        return new DiagnosticoDto(
-                d.getId(),
-                d.getCodigoCie10(), d.getDescripcion(), d.getTipo(),
-                d.getCaso(), d.getNroProblemAsoc());
-    }
-
-    private TratamientoDto toTratamientoDto(Tratamiento t) {
-        return new TratamientoDto(t.getId(), t.getCodigo(), t.getMedicamento(), t.getDosis(), t.getVia(),
-                t.getFrecuencia(), t.getDuracion(), t.getIndicaciones());
-    }
-
-    private SolicitudApoyoDto toSolicitudDto(SolicitudApoyo s) {
-        return new SolicitudApoyoDto(s.getId(), s.getTipo(), s.getDescripcion(), s.getPrioridad(), s.getObservaciones());
-    }
-
-    private DecisionClinicaRequest toDecisionRequest(DecisionClinica d) {
-        return new DecisionClinicaRequest(d.getDecisionAlta(), d.getFechaProximaCita(),
-                d.getEspecialidadRef(), d.getPlanManejo(), d.getPronostico(),
-                d.getObservaciones(), d.getMedicoNombre(), d.getMedicoCmp());
-    }
-
     private AntPersonalRequest toAntPersonalRequest(AntPersonal ant) {
         List<AppItemDto> appList = ant.getAppList().stream()
                 .map(this::toAppItemDto)
@@ -579,5 +620,4 @@ public class ConsultaExternaService {
                 m.getIndicacion()
         );
     }
-
 }

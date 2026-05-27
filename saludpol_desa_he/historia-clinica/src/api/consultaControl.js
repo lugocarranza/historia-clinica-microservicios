@@ -1,6 +1,13 @@
 import client from './client'
 
-const base = (id) => `/api/v1/hce/consulta/control/${id}`
+const base = (atencionId) => `/api/v1/hce/consulta/control/${atencionId}`
+const baseCE = (ceId) => `/api/v1/hce/consulta/control/ce/${ceId}`
+
+export const iniciarConsultaControl = (ceAtencionId, data) =>
+  client.post(`${baseCE(ceAtencionId)}/iniciar`, data).then((r) => r.data.data)
+
+export const listarConsultasCS = (ceAtencionId) =>
+  client.get(`${baseCE(ceAtencionId)}/lista`).then((r) => r.data.data)
 
 export const getResumen = (atencionId) =>
   client.get(`${base(atencionId)}/resumen`).then((r) => r.data.data)
@@ -28,11 +35,3 @@ export const guardarPlanControl = (atencionId, data) =>
 
 export const guardarDecisionControl = (atencionId, data) =>
   client.put(`${base(atencionId)}/decision-control`, data).then((r) => r.data)
-
-const baseAdmision = (id) => `/api/v1/hce/consulta/control/admision/${id}`
-
-export const iniciarConsultaControl = (admisionId) =>
-  client.post(`${baseAdmision(admisionId)}/iniciar`).then((r) => r.data.data)
-
-export const listarConsultasCS = (admisionId) =>
-  client.get(`${baseAdmision(admisionId)}/lista`).then((r) => r.data.data)

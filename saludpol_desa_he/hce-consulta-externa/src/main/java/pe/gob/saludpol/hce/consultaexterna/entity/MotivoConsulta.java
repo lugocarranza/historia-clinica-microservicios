@@ -50,4 +50,7 @@ public class MotivoConsulta extends AuditableEntity {
 
     @Column(name = "V_TRATAMIENTOS_PREVIOS", length = 1000)
     private String tratamientosPrevios;
+
+    @Column(name = "V_OAP_EPISODIO", length = 30)
+    private String oapEpisodio;
 }

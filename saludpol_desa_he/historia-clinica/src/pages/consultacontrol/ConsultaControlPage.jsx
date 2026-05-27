@@ -2,6 +2,8 @@ import PropTypes from 'prop-types'
 import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { useSaveCC, useResumenCC, useListarConsultasCS, useIniciarConsultaControl } from '@/hooks/useConsultaControl'
+import { useWindowWidth } from '@/hooks/useWindowWidth'
+import { useListarConsultasCE } from '@/hooks/useConsultaExterna'
 import PatientBanner from '@/components/layout/PatientBanner'
 import { TabsBar } from '@/components/ui/Tabs'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
@@ -18,7 +20,6 @@ import TabDiagnosticoCC from './tabs/TabDiagnosticoCC'
 import TabPlanControl from './tabs/TabPlanControl'
 import TabDecisionControl from './tabs/TabDecisionControl'
 import HistorialPanel from './HistorialPanel'
-import RegistroDetalleModal from './RegistroDetalleModal'
 
 const TABS = [
   { key: 'soap', label: '1. Motivo SOAP' },
@@ -36,13 +37,77 @@ const estadoBadgeVariant = (estado = '') => {
   return 'gray'
 }
 
-function ConsultaControlSelector({ admision, onSelectAtencion, notify }) {
-  const admisionId = admision.id
-  const { data: lista, isLoading } = useListarConsultasCS(admisionId)
-  const iniciar = useIniciarConsultaControl(admisionId)
+function ConsultaControlCESelector({ admisionId, onSelectCE }) {
+  const { data: lista, isLoading } = useListarConsultasCE(admisionId)
+
+  return (
+    <Card>
+      <CardHeader title="Seleccione la Consulta Externa" />
+      <CardBody>
+        {isLoading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+            <LoadingSpinner /> Cargando consultas externas...
+          </div>
+        )}
+        {!isLoading && (!lista || lista.length === 0) && (
+          <div className="empty-state">
+            <div className="empty-state-title">Sin consultas externas completadas</div>
+            <div>El paciente debe tener al menos una Consulta Externa completada para iniciar un control.</div>
+          </div>
+        )}
+        {!isLoading && lista && lista.length > 0 && (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Especialidad</th>
+                <th>Fecha</th>
+                <th style={{ width: 110 }}>Estado</th>
+                <th style={{ width: 80 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((ce) => {
+                const completada = ce.estado === 'COMPLETADA'
+                return (
+                  <tr key={ce.id} style={{ opacity: completada ? 1 : 0.5 }}>
+                    <td style={{ fontWeight: 500, fontSize: 13 }}>{ce.servicio || '—'}</td>
+                    <td style={{ fontSize: 13 }}>{formatDateTime(ce.fechaAtencion)}</td>
+                    <td>
+                      <Badge variant={estadoBadgeVariant(ce.estado)}>{ce.estado || '—'}</Badge>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        type="button"
+                        disabled={!completada}
+                        onClick={() => onSelectCE(ce.id)}
+                      >
+                        Seleccionar
+                      </Button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </CardBody>
+    </Card>
+  )
+}
+
+ConsultaControlCESelector.propTypes = {
+  admisionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  onSelectCE: PropTypes.func.isRequired,
+}
+
+function ConsultaControlSelector({ ceAtencionId, onSelectAtencion, notify }) {
+  const { data: lista, isLoading } = useListarConsultasCS(ceAtencionId)
+  const iniciar = useIniciarConsultaControl(ceAtencionId)
 
   const handleNueva = () => {
-    iniciar.mutate(undefined, {
+    iniciar.mutate({}, {
       onSuccess: (atencionId) => {
         notify('Nueva consulta iniciada')
         onSelectAtencion(atencionId)
@@ -107,9 +172,7 @@ function ConsultaControlSelector({ admision, onSelectAtencion, notify }) {
 }
 
 ConsultaControlSelector.propTypes = {
-  admision: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-  }).isRequired,
+  ceAtencionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   onSelectAtencion: PropTypes.func.isRequired,
   notify: PropTypes.func.isRequired,
 }
@@ -117,7 +180,7 @@ ConsultaControlSelector.propTypes = {
 function ConsultaControlWorkspace({ contexto, atencionId, onVolverSelector, notify }) {
   const [tab, setTab] = useState('soap')
   const [showHistorial, setShowHistorial] = useState(false)
-  const [historialAtencion, setHistorialAtencion] = useState(null)
+  const isMobile = useWindowWidth() < 1024
 
   const saves = useSaveCC(atencionId)
   const { data: resumen } = useResumenCC(atencionId)
@@ -150,44 +213,40 @@ function ConsultaControlWorkspace({ contexto, atencionId, onVolverSelector, noti
     <div>
       <PatientBanner paciente={contexto} nroHc={contexto?.nroHc} tipoConsulta="Control / Seguimiento" />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <Button variant="ghost" size="sm" type="button" onClick={onVolverSelector}>
-          ← Volver al listado
-        </Button>
-        <Button variant="secondary" size="sm" type="button" onClick={() => setShowHistorial(true)}>
-          Ver Historial
-        </Button>
-      </div>
-
-      {isReadOnly && (
-        <div className="highlight-block blue" style={{ marginBottom: 12 }}>
-          <strong>Atención COMPLETADA</strong> — Los formularios se muestran en modo solo lectura.
-        </div>
-      )}
-      <TabsBar tabs={TABS} active={tab} onChange={setTab} />
-
-      <div>
-        {panels.map(({ key, element }) => (
-          <div key={key} hidden={tab !== key}>
-            {element}
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Button variant="ghost" size="sm" type="button" onClick={onVolverSelector}>
+              ← Volver al listado
+            </Button>
+            <Button variant="secondary" size="sm" type="button" onClick={() => setShowHistorial((v) => !v)}>
+              {showHistorial ? 'Ocultar historial' : 'Ver historial'}
+            </Button>
           </div>
-        ))}
+
+          {isReadOnly && (
+            <div className="highlight-block blue" style={{ marginBottom: 12 }}>
+              <strong>Atención COMPLETADA</strong> — Los formularios se muestran en modo solo lectura.
+            </div>
+          )}
+          <TabsBar tabs={TABS} active={tab} onChange={setTab} />
+
+          <div>
+            {panels.map(({ key, element }) => (
+              <div key={key} hidden={tab !== key}>
+                {element}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {showHistorial && (
+          <HistorialPanel
+            dniPaciente={contexto?.dniPaciente}
+            onClose={() => setShowHistorial(false)}
+          />
+        )}
       </div>
-
-      {showHistorial && (
-        <HistorialPanel
-          historiaClinicaId={contexto.historiaClinicaId}
-          onClose={() => setShowHistorial(false)}
-          onSelectAtencion={(atencion) => setHistorialAtencion(atencion)}
-        />
-      )}
-
-      {historialAtencion && (
-        <RegistroDetalleModal
-          atencion={historialAtencion}
-          onClose={() => setHistorialAtencion(null)}
-        />
-      )}
     </div>
   )
 }
@@ -196,6 +255,7 @@ ConsultaControlWorkspace.propTypes = {
   contexto: PropTypes.shape({
     nroHc: PropTypes.string,
     historiaClinicaId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    dniPaciente: PropTypes.string,
   }),
   atencionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onVolverSelector: PropTypes.func.isRequired,
@@ -205,6 +265,7 @@ ConsultaControlWorkspace.propTypes = {
 export default function ConsultaControlPage() {
   const { toast, success, error, hideToast } = useToast()
   const [admisionSeleccionada, setAdmisionSeleccionada] = useState(null)
+  const [ceAtencionId, setCeAtencionId] = useState(null)
   const [atencionId, setAtencionId] = useState(null)
 
   const showToast = (msg, type = 'success') => {
@@ -214,6 +275,7 @@ export default function ConsultaControlPage() {
 
   const handleSelectAdmision = (admision) => {
     setAdmisionSeleccionada(admision)
+    setCeAtencionId(null)
     setAtencionId(null)
   }
 
@@ -222,7 +284,6 @@ export default function ConsultaControlPage() {
       <div className="page-top">
         <div>
           <div className="page-title">Consulta Control / Seguimiento</div>
-          <div className="page-subtitle">Historia Clínica Electrónica &mdash; Seguimiento y control</div>
         </div>
       </div>
 
@@ -244,15 +305,22 @@ export default function ConsultaControlPage() {
         </Card>
       )}
 
-      {admisionSeleccionada && !atencionId && (
+      {admisionSeleccionada && !ceAtencionId && (
+        <ConsultaControlCESelector
+          admisionId={admisionSeleccionada.id}
+          onSelectCE={setCeAtencionId}
+        />
+      )}
+
+      {admisionSeleccionada && ceAtencionId && !atencionId && (
         <ConsultaControlSelector
-          admision={admisionSeleccionada}
+          ceAtencionId={ceAtencionId}
           onSelectAtencion={setAtencionId}
           notify={showToast}
         />
       )}
 
-      {admisionSeleccionada && atencionId && (
+      {admisionSeleccionada && ceAtencionId && atencionId && (
         <ConsultaControlWorkspace
           key={atencionId}
           contexto={admisionSeleccionada}

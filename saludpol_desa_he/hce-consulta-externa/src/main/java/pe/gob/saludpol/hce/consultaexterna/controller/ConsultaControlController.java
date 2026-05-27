@@ -18,14 +18,17 @@ public class ConsultaControlController {
 
     private final ConsultaControlService service;
 
-    @PostMapping("/admision/{admisionId}/iniciar")
-    public ResponseEntity<ApiResponse<Long>> iniciar(@PathVariable Long admisionId) {
-        return ResponseEntity.ok(ApiResponse.ok(service.iniciarConsultaControl(admisionId)));
+    @PostMapping("/ce/{ceAtencionId}/iniciar")
+    public ResponseEntity<ApiResponse<Long>> iniciar(
+            @PathVariable Long ceAtencionId,
+            @Valid @RequestBody(required = false) IniciarCSRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(service.iniciarConsultaControl(ceAtencionId,
+                request != null ? request : new IniciarCSRequest(null))));
     }
 
-    @GetMapping("/admision/{admisionId}/lista")
-    public ResponseEntity<ApiResponse<List<AtencionResponse>>> lista(@PathVariable Long admisionId) {
-        return ResponseEntity.ok(ApiResponse.ok(service.listarConsultasCS(admisionId)));
+    @GetMapping("/ce/{ceAtencionId}/lista")
+    public ResponseEntity<ApiResponse<List<AtencionResponse>>> lista(@PathVariable Long ceAtencionId) {
+        return ResponseEntity.ok(ApiResponse.ok(service.listarConsultasCS(ceAtencionId)));
     }
 
     @GetMapping("/{atencionId}/resumen")

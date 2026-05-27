@@ -45,6 +45,7 @@ export default function MedicationTableSection({
   descriptionPlaceholder,
   frequencyField,
   trailingField,
+  showDuracion = true,
   addButtonLabel,
 }) {
   const [lookupState, setLookupState] = useState({})
@@ -153,10 +154,10 @@ export default function MedicationTableSection({
                 <th style={{ width: 100 }}>Código</th>
                 <th>{descriptionLabel}</th>
                 <th style={{ width: 80 }}>Dosis</th>
-                <th style={{ width: 100 }}>Vía</th>
-                <th style={{ width: 80 }}>{frequencyField.label}</th>
-                <th style={{ width: 80 }}>Duración{frequencyField.durationSuffix || ''}</th>
-                <th style={{ width: trailingField.headerWidth }}>{trailingField.label}</th>
+                <th style={{ width: 80 }}>Via</th>
+                <th style={{ width: frequencyField.headerWidth || 100 }}>{frequencyField.label}</th>
+                {showDuracion && <th style={{ width: 100 }}>Duracion{frequencyField.durationSuffix || ''}</th>}
+                {trailingField && <th style={{ width: trailingField.headerWidth }}>{trailingField.label}</th>}
                 <th style={{ width: 44 }}></th>
               </tr>
             </thead>
@@ -300,53 +301,57 @@ export default function MedicationTableSection({
                         />
                       </FormField>
                     </td>
-                    <td>
-                      <FormField error={rowErrors?.duracion?.message}>
-                        <Input
-                          {...register(getPath(index, 'duracion'),
-                            frequencyField.durationRules || {
-                              maxLength: {
-                                value: frequencyField.durationMaxLength || 50,
-                                message: `La duración no debe superar ${frequencyField.durationMaxLength || 50} caracteres`,
-                              },
-                            }
-                          )}
-                          min={1}
-                          maxLength={frequencyField.durationMaxLength || 50}
-                          type={frequencyField.durationType}
-                          inputMode={frequencyField.durationInputMode}
-                          placeholder={frequencyField.durationPlaceholder}
-                          disabled={isReadOnly}
-                          style={inputCellStyle}
-                        />
-                      </FormField>
-                    </td>
-                    <td>
-                      <FormField error={rowErrors?.[trailingField.key]?.message}>
-                        {trailingField.kind === 'select' ? (
-                          <Select
-                            {...register(getPath(index, trailingField.key), trailingField.rules)}
-                            disabled={isReadOnly}
-                            style={{
-                              ...inputCellStyle,
-                              ...(trailingField.getStyle ? trailingField.getStyle(rowValue[trailingField.key]) : {}),
-                            }}
-                          >
-                            {trailingField.options.map((option) => (
-                              <option key={option}>{option}</option>
-                            ))}
-                          </Select>
-                        ) : (
+                    {showDuracion && (
+                      <td>
+                        <FormField error={rowErrors?.duracion?.message}>
                           <Input
-                            {...register(getPath(index, trailingField.key), trailingField.rules)}
-                            maxLength={trailingField.maxLength}
-                            placeholder={trailingField.placeholder}
+                            {...register(getPath(index, 'duracion'),
+                              frequencyField.durationRules || {
+                                maxLength: {
+                                  value: frequencyField.durationMaxLength || 50,
+                                  message: `La duracion no debe superar ${frequencyField.durationMaxLength || 50} caracteres`,
+                                },
+                              }
+                            )}
+                            min={1}
+                            maxLength={frequencyField.durationMaxLength || 50}
+                            type={frequencyField.durationType}
+                            inputMode={frequencyField.durationInputMode}
+                            placeholder={frequencyField.durationPlaceholder}
                             disabled={isReadOnly}
                             style={inputCellStyle}
                           />
-                        )}
-                      </FormField>
-                    </td>
+                        </FormField>
+                      </td>
+                    )}
+                    {trailingField && (
+                      <td>
+                        <FormField error={rowErrors?.[trailingField.key]?.message}>
+                          {trailingField.kind === 'select' ? (
+                            <Select
+                              {...register(getPath(index, trailingField.key), trailingField.rules)}
+                              disabled={isReadOnly}
+                              style={{
+                                ...inputCellStyle,
+                                ...(trailingField.getStyle ? trailingField.getStyle(rowValue[trailingField.key]) : {}),
+                              }}
+                            >
+                              {trailingField.options.map((option) => (
+                                <option key={option}>{option}</option>
+                              ))}
+                            </Select>
+                          ) : (
+                            <Input
+                              {...register(getPath(index, trailingField.key), trailingField.rules)}
+                              maxLength={trailingField.maxLength}
+                              placeholder={trailingField.placeholder}
+                              disabled={isReadOnly}
+                              style={inputCellStyle}
+                            />
+                          )}
+                        </FormField>
+                      </td>
+                    )}
                     <td>
                       {!getValues(getPath(index, 'id')) && (
                         <Button
@@ -434,6 +439,7 @@ MedicationTableSection.propTypes = {
     placeholder: PropTypes.string,
     options: PropTypes.array,
     getStyle: PropTypes.func,
-  }).isRequired,
+  }),
+  showDuracion: PropTypes.bool,
   addButtonLabel: PropTypes.string.isRequired,
 }

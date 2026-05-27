@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp, RefreshCw, Search } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search } from 'lucide-react'
 import { useBuscarAdmisiones } from '@/hooks/useAdmision'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -112,7 +112,6 @@ export default function FiliacionSearchTray({
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: 90 }}>Nº Historia</th>
                 <th style={{ width: 90 }}>DNI</th>
                 <th>Paciente</th>
                 <th style={{ width: 140 }}>Fecha</th>
@@ -139,7 +138,6 @@ export default function FiliacionSearchTray({
                       }
                     }}
                   >
-                    <td className={styles.mono}>{admision.nroHc || '—'}</td>
                     <td className={styles.mono}>{admision.dniPaciente || '—'}</td>
                     <td>
                       <div className={styles.patientName}>
@@ -170,15 +168,12 @@ export default function FiliacionSearchTray({
     <Card>
       <CardHeader
         title="Búsqueda de filiación"
-        actions={<>
+        actions={
           <Button variant="ghost" size="sm" onClick={() => setIsOpen((value) => !value)}>
             {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {isOpen ? 'Ocultar' : 'Mostrar'}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={!filtrosActivos || isFetching}>
-            <RefreshCw size={14} className={isFetching ? styles.spin : ''} />
-          </Button>
-        </>}
+        }
       />
       {isOpen && (
         <CardBody>

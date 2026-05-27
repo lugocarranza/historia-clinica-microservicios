@@ -1,6 +1,13 @@
 import client from './client'
 
-const base = (id) => `/api/v1/hce/consulta/externa/admision/${id}`
+const base = (atencionId) => `/api/v1/hce/consulta/externa/${atencionId}`
+const baseAdmision = (admisionId) => `/api/v1/hce/consulta/externa/admision/${admisionId}`
+
+export const iniciarConsultaExterna = (admisionId, data) =>
+  client.post(`${baseAdmision(admisionId)}/iniciar`, data).then((r) => r.data.data)
+
+export const listarConsultasCE = (admisionId) =>
+  client.get(`${baseAdmision(admisionId)}/lista`).then((r) => r.data.data)
 
 export const getResumen = (atencionId) =>
   client.get(`${base(atencionId)}/resumen`).then((r) => r.data.data)

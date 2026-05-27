@@ -29,8 +29,21 @@
 	font-weight: 600;
 }
 
+.searchForm {
+	display: grid;
+	gap: 12px;
+	min-width: 0;
+}
+
+.formGrid {
+	display: grid;
+	gap: 10px;
+	min-width: 0;
+}
+
 .resultsSection {
 	margin-top: 14px;
+	min-width: 0;
 }
 
 .resultsHeader {
@@ -54,10 +67,34 @@
 	color: var(--text-light);
 }
 
+.loadingOverlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.88));
+	z-index: 1;
+}
+
+.tableWrapper,
 .tableWrap {
 	border: 1px solid var(--border-light);
 	border-radius: 10px;
-	overflow: hidden;
+	width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	max-width: 100%;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior-x: contain;
+}
+
+.tableWrapper :global(.data-table),
+.tableWrap :global(.data-table) {
+	min-width: 680px;
+	width: 100%;
+	table-layout: fixed;
 }
 
 .clickableRow {
@@ -103,5 +140,22 @@
 	.helperMeta {
 		white-space: normal;
 		flex-wrap: wrap;
+	}
+
+	.searchForm {
+		gap: 10px;
+	}
+
+	.formGrid {
+		grid-template-columns: 1fr;
+	}
+
+	.resultsHint {
+		white-space: normal;
+	}
+
+	.mono,
+	.patientName {
+		overflow-wrap: anywhere;
 	}
 }

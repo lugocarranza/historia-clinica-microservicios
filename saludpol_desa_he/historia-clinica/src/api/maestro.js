@@ -30,3 +30,26 @@ export const buscarProcedimientos = async (termino) => {
   })
   return data.data ?? []
 }
+
+export const buscarSubTiposProcedimiento = async (idTipoProcedimiento, idSubTipoProcedimientoParent) => {
+  const { data } = await client.get('/api/v1/maestros/subTipoProcedimiento/list', {
+    params: {
+      idTipoProcedimiento,
+      ...(idSubTipoProcedimientoParent != null && { idSubTipoProcedimientoParent }),
+    },
+  })
+  return data.data ?? []
+}
+
+export const buscarProfesionalSalud = (numeroDocumento) =>
+  client
+    .get('/api/v1/maestros/profesional_salud/obtener', { params: { numero_documento: numeroDocumento } })
+    .then((r) => r.data.data)
+
+export const buscarProcedimientosCpms = async (termino, idSubTipoProcedimiento) => {
+  if (!termino?.trim()) return []
+  const { data } = await client.get('/api/v1/maestros/procedimientos/list_cpms_privada_publica', {
+    params: { privada_publica: 2, idTipoProcedimiento: 2, idSubTipoProcedimiento, codigoUpss: 0, termino },
+  })
+  return data.data ?? []
+}

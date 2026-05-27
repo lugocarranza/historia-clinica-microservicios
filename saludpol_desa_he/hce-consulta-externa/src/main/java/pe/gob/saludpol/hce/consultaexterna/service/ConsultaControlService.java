@@ -1,9 +1,6 @@
 package pe.gob.saludpol.hce.consultaexterna.service;
 
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
-import pe.gob.saludpol.hce.consultaexterna.client.FiliacionClient;
-import pe.gob.saludpol.hce.consultaexterna.client.dto.AdmisionClientDto;
 import pe.gob.saludpol.hce.consultaexterna.common.exception.EntityNotFoundException;
 import pe.gob.saludpol.hce.consultaexterna.common.exception.EntityUnprocessableException;
 import pe.gob.saludpol.hce.consultaexterna.dto.*;
@@ -23,7 +20,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ConsultaControlService {
 
-    private final FiliacionClient filiacionClient;
     private final AtencionRepository atencionRepository;
     private final SoapSubjetivoRepository soapSRepo;
     private final SoapObjetivoRepository soapORepo;
@@ -34,6 +30,7 @@ public class ConsultaControlService {
     private final DecisionControlRepository decisionControlRepo;
     private final ListaProblemaRepository listaProblemaRepository;
     private final DiagnosticoRepository diagnosticoRepository;
+    private final SolicitudApoyoRepository solicitudApoyoRepository;
 
     private static final String ESTADO_COMPLETADA = "COMPLETADA";
 
@@ -167,6 +164,24 @@ public class ConsultaControlService {
         plan.setIndicaciones(dto.indicaciones());
         plan.setCriteriosAlarma(dto.criteriosAlarma());
         planControlRepo.save(plan);
+
+        if (dto.solicitudesApoyo() != null) {
+            for (SolicitudApoyoDto s : dto.solicitudesApoyo()) {
+                SolicitudApoyo entity = s.id() != null
+                        ? solicitudApoyoRepository.findById(s.id()).orElseGet(SolicitudApoyo::new)
+                        : new SolicitudApoyo();
+                entity.setAtencion(atencion);
+                entity.setTipo(s.tipo());
+                entity.setDescripcion(s.descripcion());
+                entity.setPrioridad(s.prioridad());
+                entity.setObservaciones(s.observaciones());
+                entity.setIdSubTipoParent(s.idSubTipoParent());
+                entity.setIdSubTipoUltimo(s.idSubTipoUltimo());
+                entity.setCodigoCpms(s.codigoCpms());
+                entity.setCodigoSegus(s.codigoSegus());
+                solicitudApoyoRepository.save(entity);
+            }
+        }
     }
 
     @Transactional
@@ -184,9 +199,10 @@ public class ConsultaControlService {
         entity.setProfDocIdent(dto.profDocIdent());
         entity.setProfColegiatura(dto.profColegiatura());
         entity.setProfRegEspecialidad(dto.profRegEspecialidad());
-        entity.setFechaCierre(dto.fechaCierre() != null ? dto.fechaCierre() : LocalDateTime.now());
+        entity.setFechaCierre(LocalDateTime.now());
         entity.setLogUsuario(SecurityContextHolder.getContext().getAuthentication().getName());
         entity.setLogFecha(LocalDateTime.now());
+        entity.setIpressCui(dto.ipressCui());
         decisionControlRepo.save(entity);
         completarAtencion(atencion);
     }
@@ -204,9 +220,10 @@ public class ConsultaControlService {
         List<DiagnosticoDto> diags = diagnosticoRepository.findByAtencionId(atencionId)
                 .stream().map(this::toDiagDto).toList();
         PlanControlDto plan = buildPlanControlDto(atencionId);
+        List<SolicitudApoyoDto> solicitudes = plan.solicitudesApoyo();
         DecisionControlDto dec = decisionControlRepo.findByAtencionId(atencionId)
                 .map(this::toDecDto).orElse(null);
-        return new ConsultaControlResumen(atencionId, atencion.getEstado(), sS, sO, sA, sP, probs, diags, plan, dec);
+        return new ConsultaControlResumen(atencionId, atencion.getEstado(), sS, sO, sA, sP, probs, diags, plan, solicitudes, dec);
     }
 
     private PlanControlDto buildPlanControlDto(Long atencionId) {
@@ -214,9 +231,14 @@ public class ConsultaControlService {
                 .stream().map(m -> new MedPlanControlDto(m.getId(), m.getCodigo(), m.getFarmaco(), m.getDosis(),
                         m.getVia(), m.getFrecuencia(), m.getDuracion(), m.getConducta()))
                 .toList();
+        List<SolicitudApoyoDto> solicitudes = solicitudApoyoRepository.findByAtencionId(atencionId)
+                .stream().map(s -> new SolicitudApoyoDto(s.getId(), s.getTipo(), s.getDescripcion(),
+                        s.getPrioridad(), s.getObservaciones(), s.getIdSubTipoParent(),
+                        s.getIdSubTipoUltimo(), s.getCodigoCpms(), s.getCodigoSegus()))
+                .toList();
         return planControlRepo.findByAtencionId(atencionId)
-                .map(p -> new PlanControlDto(meds, p.getProximaCita(), p.getIndicaciones(), p.getCriteriosAlarma()))
-                .orElse(new PlanControlDto(meds, null, null, null));
+                .map(p -> new PlanControlDto(meds, solicitudes, p.getProximaCita(), p.getIndicaciones(), p.getCriteriosAlarma()))
+                .orElse(new PlanControlDto(meds, solicitudes, null, null, null));
     }
 
     private void completarAtencion(Atencion atencion) {
@@ -226,40 +248,33 @@ public class ConsultaControlService {
 
 
     @Transactional
-    public Long iniciarConsultaControl(Long admisionId) {
-        AdmisionClientDto admision;
-        try {
-            admision = filiacionClient.obtenerAdmision(admisionId).data();
-        } catch (FeignException.NotFound e) {
-            throw new EntityNotFoundException("Admision no encontrada con id: " + admisionId);
-        }
-        if (!atencionRepository.existsByAdmisionIdAndTipoAtencionAndEstado(admisionId, "CE", ESTADO_COMPLETADA)) {
+    public Long iniciarConsultaControl(Long ceAtencionId, IniciarCSRequest request) {
+        Atencion ceAtencion = atencionRepository.findById(ceAtencionId)
+                .orElseThrow(() -> new EntityNotFoundException("Consulta Externa no encontrada con id: " + ceAtencionId));
+        if (!ESTADO_COMPLETADA.equals(ceAtencion.getEstado())) {
             throw new EntityUnprocessableException(
-                    "No existe una Consulta Externa completada para esta admisión. Debe completar la consulta externa primero.");
+                    "La Consulta Externa debe estar completada antes de iniciar una Consulta de Control.");
         }
         Atencion at = new Atencion();
-        at.setAdmisionId(admisionId);
-        at.setHistoriaClinicaId(admision.historiaClinicaId());
+        at.setAdmisionId(ceAtencion.getAdmisionId());
+        at.setDniPaciente(ceAtencion.getDniPaciente());
         at.setTipoAtencion("CS");
         at.setFechaAtencion(LocalDateTime.now());
+        at.setCeAtencionId(ceAtencionId);
+        at.setIpressCui(request.ipressCui());
         return atencionRepository.save(at).getId();
     }
 
     @Transactional(readOnly = true)
-    public List<AtencionResponse> listarConsultasCS(Long admisionId) {
+    public List<AtencionResponse> listarConsultasCS(Long ceAtencionId) {
         return atencionRepository
-                .findByAdmisionIdAndTipoAtencionOrderByFechaAtencionDesc(admisionId, "CS")
+                .findByCeAtencionIdAndTipoAtencionOrderByFechaAtencionDesc(ceAtencionId, "CS")
                 .stream()
                 .map(item -> new AtencionResponse(
-                        item.getId(),
-                        item.getAdmisionId(),
-                        item.getHistoriaClinicaId(),
-                        item.getTipoAtencion(),
-                        item.getFechaAtencion(),
-                        null,
-                        null,
-                        item.getEstado(),
-                        item.getCreatedAt()))
+                        item.getId(), item.getAdmisionId(),
+                        item.getTipoAtencion(), item.getFechaAtencion(),
+                        item.getServicio(), item.getDniPaciente(), item.getCeAtencionId(),
+                        item.getEstado(), item.getCreatedAt()))
                 .toList();
     }
 
@@ -310,6 +325,7 @@ public class ConsultaControlService {
     private DecisionControlDto toDecDto(DecisionControl e) {
         return new DecisionControlDto(e.getDecision(), e.getRefPnpIpress(), e.getRefPnpMotivo(),
                 e.getRefNopnpIpress(), e.getRefNopnpMotivo(), e.getProfNombres(), e.getProfDocIdent(),
-                e.getProfColegiatura(), e.getProfRegEspecialidad(), e.getFechaCierre());
+                e.getProfColegiatura(), e.getProfRegEspecialidad(),
+                e.getIpressCui());
     }
 }

@@ -1,9 +1,9 @@
 import PropTypes from 'prop-types'
 import styles from './FormField.module.css'
 
-export default function FormField({ label, required, error, warning, hint, children, className = '' }) {
+export default function FormField({ label, required, error, warning, hint, children, className = '', hidden = false }) {
   return (
-    <div className={[styles.field, className].filter(Boolean).join(' ')}>
+    <div className={[styles.field, className, hidden ? styles.hidden : ''].filter(Boolean).join(' ')}>
       {label && (
         <label className={styles.label}>
           {label}
@@ -26,4 +26,5 @@ FormField.propTypes = {
   hint: PropTypes.string,
   children: PropTypes.node,
   className: PropTypes.string,
+  hidden: PropTypes.bool,
 }

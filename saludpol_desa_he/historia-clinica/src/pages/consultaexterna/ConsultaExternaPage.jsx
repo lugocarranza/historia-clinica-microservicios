@@ -1,10 +1,14 @@
 import PropTypes from 'prop-types'
 import { useState } from 'react'
 import { AxiosError } from 'axios'
-import { useResumenCE, useSaveCE } from '@/hooks/useConsultaExterna'
+import { useResumenCE, useSaveCE, useListarConsultasCE, useIniciarConsultaExterna } from '@/hooks/useConsultaExterna'
+import { ESPECIALIDADES } from '@/constants/especialidades'
+import { getRequiredRegions } from '@/utils/matrizHallazgosRegion'
 import PatientBanner from '@/components/layout/PatientBanner'
 import { TabsBar } from '@/components/ui/Tabs'
-import { Card, CardBody } from '@/components/ui/Card'
+import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+import Button from '@/components/ui/Button'
+import { Select } from '@/components/ui/Input'
 import Toast from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import FiliacionSearchTray from '@/components/common/FiliacionSearchTray'
@@ -34,18 +38,148 @@ const TABS = [
   { key: 'decision', label: '10. Decisión Clínica' },
 ]
 
-function ConsultaExternaWorkspace({ contexto, notify }) {
+const estadoBadgeVariant = (estado = '') => {
+  const v = estado.toUpperCase()
+  if (v.includes('COMPLET')) return 'blue'
+  if (v.includes('ABIERT')) return 'green'
+  if (v.includes('ANUL')) return 'red'
+  return 'gray'
+}
+
+function ConsultaExternaSelector({ admision, onSelectAtencion, notify }) {
+  const [servicioNuevo, setServicioNuevo] = useState(admision?.servicio || '')
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const admisionId = admision?.id
+  const { data: lista, isLoading } = useListarConsultasCE(admisionId)
+  const iniciar = useIniciarConsultaExterna(admisionId)
+
+  const handleNueva = () => {
+    if (!servicioNuevo) return
+    iniciar.mutate(
+      { servicio: servicioNuevo, dniPaciente: admision?.dniPaciente || '' },
+      {
+        onSuccess: (ce) => {
+          notify('Nueva consulta iniciada')
+          onSelectAtencion(ce.id)
+        },
+        onError: (err) => {
+          const msg = err instanceof Error && err.response?.data?.message
+            ? err.response.data.message
+            : 'Error al iniciar la consulta'
+          notify(msg, 'error')
+        },
+      }
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        title="Consultas Externas"
+        actions={
+          <Button variant="primary" size="sm" type="button" onClick={() => setMostrarForm((v) => !v)}>
+            + Nueva Consulta
+          </Button>
+        }
+      />
+      <CardBody>
+        {mostrarForm && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 12, padding: 12, background: 'var(--bg)', borderRadius: 'var(--radius)', border: '1px solid var(--border-light)' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Especialidad *</div>
+              <Select
+                value={servicioNuevo}
+                onChange={(e) => setServicioNuevo(e.target.value)}
+                className="input"
+                style={{ width: '100%' }}
+              >
+                <option value="">— Seleccionar —</option>
+                {ESPECIALIDADES.map((e) => <option key={e}>{e}</option>)}
+              </Select>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              type="button"
+              disabled={!servicioNuevo || iniciar.isPending}
+              onClick={handleNueva}
+            >
+              {iniciar.isPending ? 'Iniciando...' : 'Iniciar'}
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={() => setMostrarForm(false)}>
+              Cancelar
+            </Button>
+          </div>
+        )}
+
+        {isLoading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+            <LoadingSpinner /> Cargando consultas...
+          </div>
+        )}
+
+        {!isLoading && (!lista || lista.length === 0) && (
+          <div className="empty-state">
+            <div className="empty-state-title">Sin consultas externas</div>
+            <div>Use el botón &ldquo;Nueva Consulta&rdquo; para registrar la primera atención.</div>
+          </div>
+        )}
+
+        {!isLoading && lista && lista.length > 0 && (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Especialidad</th>
+                <th>Fecha</th>
+                <th style={{ width: 110 }}>Estado</th>
+                <th style={{ width: 80 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((ce) => (
+                <tr key={ce.id}>
+                  <td style={{ fontWeight: 500, fontSize: 13 }}>{ce.servicio || '—'}</td>
+                  <td style={{ fontSize: 13 }}>{ce.fechaAtencion ? new Date(ce.fechaAtencion).toLocaleString('es-PE') : '—'}</td>
+                  <td>
+                    <Badge variant={estadoBadgeVariant(ce.estado)}>{ce.estado || '—'}</Badge>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <Button variant="secondary" size="xs" type="button" onClick={() => onSelectAtencion(ce.id)}>
+                      Abrir
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </CardBody>
+    </Card>
+  )
+}
+
+ConsultaExternaSelector.propTypes = {
+  admision: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    dniPaciente: PropTypes.string,
+    servicio: PropTypes.string,
+  }),
+  onSelectAtencion: PropTypes.func.isRequired,
+  notify: PropTypes.func.isRequired,
+}
+
+function ConsultaExternaWorkspace({ contexto, atencionId, onVolverSelector, notify }) {
   const [tab, setTab] = useState('motivo')
-  const admisionId = contexto?.id
   const {
     data: resumen,
     isLoading: isResumenLoading,
     isError: isResumenError,
     isFetching: isResumenFetching,
-  } = useResumenCE(admisionId)
-  const saves = useSaveCE(admisionId)
+  } = useResumenCE(atencionId)
+  const saves = useSaveCE(atencionId)
   const atencionEstado = resumen?.atencionEstado || ''
   const isReadOnly = atencionEstado === 'COMPLETADA'
+  const requiredRegions = getRequiredRegions(resumen?.revisionSistemas)
 
   const showToast = (msg, type = 'success') => {
     if (notify) notify(msg, type)
@@ -134,13 +268,12 @@ function ConsultaExternaWorkspace({ contexto, notify }) {
       </Card>
     )
   }
-
   const panels = [
     { key: 'motivo', element: <TabMotivo {...getProps(0)} initialData={resumen?.motivo} /> },
     { key: 'antPersonal', element: <TabAntPersonal {...getProps(1)} initialData={resumen?.antPersonal} /> },
     { key: 'antFamiliar', element: <TabAntFamiliares {...getProps(2)} initialData={resumen?.antFamiliares} /> },
     { key: 'revSistemas', element: <TabRevisionSistemas {...getProps(3)} initialData={resumen?.revisionSistemas} /> },
-    { key: 'exFisico', element: <TabExamenFisico {...getProps(4)} initialData={resumen?.examenFisico} /> },
+    { key: 'exFisico', element: <TabExamenFisico {...getProps(4)} initialData={resumen?.examenFisico} requiredRegions={requiredRegions} /> },
     { key: 'listaProb', element: <TabListaProblemas {...getProps(5)} initialData={resumen?.listaProblemas} /> },
     { key: 'diagnostico', element: <TabDiagnostico {...getProps(6)} initialData={resumen?.diagnosticos} /> },
     {
@@ -162,6 +295,12 @@ function ConsultaExternaWorkspace({ contexto, notify }) {
   return (
     <div>
       <PatientBanner paciente={contexto} nroHc={contexto?.nroHc} tipoConsulta="Consulta Externa" />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <Button variant="ghost" size="sm" type="button" onClick={onVolverSelector}>
+          ← Volver al listado
+        </Button>
+      </div>
 
       <div
         className="highlight-block"
@@ -204,17 +343,27 @@ ConsultaExternaWorkspace.propTypes = {
   contexto: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     nroHc: PropTypes.string,
+    dniPaciente: PropTypes.string,
+    servicio: PropTypes.string,
   }),
+  atencionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onVolverSelector: PropTypes.func.isRequired,
   notify: PropTypes.func,
 }
 
 export default function ConsultaExternaPage() {
   const { toast, success, error, hideToast } = useToast()
-  const [contextoSeleccionado, setContextoSeleccionado] = useState(null)
+  const [admisionSeleccionada, setAdmisionSeleccionada] = useState(null)
+  const [atencionId, setAtencionId] = useState(null)
 
   const showToast = (msg, type = 'success') => {
     if (type === 'success') success(msg)
     else error(msg)
+  }
+
+  const handleSelectAdmision = (admision) => {
+    setAdmisionSeleccionada(admision)
+    setAtencionId(null)
   }
 
   return (
@@ -222,27 +371,16 @@ export default function ConsultaExternaPage() {
       <div className="page-top">
         <div>
           <div className="page-title">Consulta Externa</div>
-          <div className="page-subtitle">Historia Clínica Electrónica &mdash; Atención ambulatoria</div>
         </div>
-        {/* <div className="page-actions">
-          <Button variant="secondary" size="sm">Imprimir</Button>
-          <Button variant="secondary" size="sm">Exportar PDF</Button>
-        </div> */}
       </div>
 
       <FiliacionSearchTray
         notify={showToast}
-        selectedContext={contextoSeleccionado}
-        onSelect={setContextoSeleccionado}
+        selectedContext={admisionSeleccionada}
+        onSelect={handleSelectAdmision}
       />
 
-      {contextoSeleccionado ? (
-        <ConsultaExternaWorkspace
-          key={contextoSeleccionado.id}
-          contexto={contextoSeleccionado}
-          notify={showToast}
-        />
-      ) : (
+      {!admisionSeleccionada && (
         <Card>
           <CardBody>
             <div className="empty-state">
@@ -251,6 +389,24 @@ export default function ConsultaExternaPage() {
             </div>
           </CardBody>
         </Card>
+      )}
+
+      {admisionSeleccionada && !atencionId && (
+        <ConsultaExternaSelector
+          admision={admisionSeleccionada}
+          onSelectAtencion={setAtencionId}
+          notify={showToast}
+        />
+      )}
+
+      {admisionSeleccionada && atencionId && (
+        <ConsultaExternaWorkspace
+          key={atencionId}
+          contexto={admisionSeleccionada}
+          atencionId={atencionId}
+          onVolverSelector={() => setAtencionId(null)}
+          notify={showToast}
+        />
       )}
 
       {toast && <Toast message={toast.msg} type={toast.error === true ? 'error' : 'success'} onClose={hideToast} />}

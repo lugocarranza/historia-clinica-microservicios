@@ -38,7 +38,7 @@ const getDefaultValues = (data) => {
   }
 }
 
-export default function TabExamenFisico({ onSave, saves, initialData, isReadOnly = false }) {
+export default function TabExamenFisico({ onSave, saves, initialData, isReadOnly = false, requiredRegions }) {
   const {
     register,
     handleSubmit,
@@ -118,21 +118,24 @@ export default function TabExamenFisico({ onSave, saves, initialData, isReadOnly
         <CardHeader title="Hallazgos por Región" />
         <CardBody>
           <div className="form-grid g2" style={{ gap: 10 }}>
-            {REGIONES.map((region, i) => (
-              <FormField key={region} label={region} error={errors.regiones?.[i]?.hallazgos?.message}>
-                <Input
-                  {...register(`regiones.${i}.hallazgos`, {
-                    maxLength: {
-                      value: MAX_LENGTHS.hallazgos,
-                      message: `Los hallazgos no deben superar ${MAX_LENGTHS.hallazgos} caracteres`,
-                    },
-                  })}
-                  maxLength={MAX_LENGTHS.hallazgos}
-                  placeholder={`Hallazgos en ${region.toLowerCase()}`}
-                  disabled={isReadOnly}
-                />
-              </FormField>
-            ))}
+            {REGIONES.map((region, i) => {
+              if (requiredRegions?.size > 0 && region !== 'Aspecto General' && !requiredRegions.has(region)) return null
+              return (
+                <FormField key={region} label={region} error={errors.regiones?.[i]?.hallazgos?.message}>
+                  <Input
+                    {...register(`regiones.${i}.hallazgos`, {
+                      maxLength: {
+                        value: MAX_LENGTHS.hallazgos,
+                        message: `Los hallazgos no deben superar ${MAX_LENGTHS.hallazgos} caracteres`,
+                      },
+                    })}
+                    maxLength={MAX_LENGTHS.hallazgos}
+                    placeholder={`Hallazgos en ${region.toLowerCase()}`}
+                    disabled={isReadOnly}
+                  />
+                </FormField>
+              )
+            })}
           </div>
         </CardBody>
       </Card>
@@ -153,4 +156,5 @@ TabExamenFisico.propTypes = {
   }),
   initialData: PropTypes.object,
   isReadOnly: PropTypes.bool,
+  requiredRegions: PropTypes.instanceOf(Set),
 }

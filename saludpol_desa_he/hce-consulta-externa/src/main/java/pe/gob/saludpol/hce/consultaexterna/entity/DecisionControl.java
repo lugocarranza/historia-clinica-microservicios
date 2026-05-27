@@ -62,8 +62,8 @@ public class DecisionControl extends AuditableEntity {
     @Column(name = "V_LOG_USUARIO", length = 50)
     private String logUsuario;
 
-    @Column(name = "V_LOG_IPRESS_ORIGEN", length = 255)
-    private String logIpressOrigen;
+    @Column(name = "V_IPRESS_CUI", length = 20)
+    private String ipressCui;
 
     @Column(name = "V_LOG_ACCION", length = 100)
     private String logAccion = "REGISTRO_CONSULTA_CONTROL";

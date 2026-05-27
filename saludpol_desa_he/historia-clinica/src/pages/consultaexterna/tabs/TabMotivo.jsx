@@ -7,6 +7,7 @@ import FormField from '@/components/ui/FormField'
 import Button from '@/components/ui/Button'
 
 const MAX_LENGTHS = {
+  oapEpisodio: 30,
   motivo: 500,
   tiempoEnfermedad: 50,
   formaInicio: 20,
@@ -19,6 +20,7 @@ const MAX_LENGTHS = {
 }
 
 const getDefaultValues = (data) => ({
+  oapEpisodio: data?.oapEpisodio || '',
   motivo: data?.motivo || '',
   tiempoEnfermedad: data?.tiempoEnfermedad || '',
   formaInicio: data?.formaInicio || '',
@@ -36,19 +38,7 @@ export default function TabMotivo({ onSave, saves, initialData, isReadOnly = fal
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm({
-    defaultValues: {
-      motivo: '',
-      tiempoEnfermedad: '',
-      formaInicio: '',
-      curso: '',
-      enfermedadActual: '',
-      sintomasSignos: '',
-      relatoCronologico: '',
-      factoresMod: '',
-      tratamientosPrevios: '',
-    },
-  })
+  } = useForm({ defaultValues: getDefaultValues(null) })
 
   useEffect(() => {
     reset(getDefaultValues(initialData))
@@ -65,6 +55,20 @@ export default function TabMotivo({ onSave, saves, initialData, isReadOnly = fal
       <Card>
         <CardBody>
           <div className="form-grid g3" style={{ marginBottom: 12 }}>
+            <FormField label="OAP Asociada" error={errors.oapEpisodio?.message}>
+              <Input
+                {...register('oapEpisodio', {
+                  maxLength: {
+                    value: MAX_LENGTHS.oapEpisodio,
+                    message: `La OAP no debe superar ${MAX_LENGTHS.oapEpisodio} caracteres`,
+                  },
+                })}
+                maxLength={MAX_LENGTHS.oapEpisodio}
+                placeholder="Nro OAP (opcional)"
+                disabled={isReadOnly}
+              />
+            </FormField>
+
             <div style={{ gridColumn: '1/3' }}>
               <FormField label="Motivo de Consulta" required error={errors.motivo?.message}>
                 <Input

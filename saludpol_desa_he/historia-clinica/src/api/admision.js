@@ -26,3 +26,6 @@ export const obtenerHcPorDni = (dni) =>
 
 export const listarAtenciones = (historiaClinicaId) =>
   client.get(`/api/v1/hce/consulta/atenciones/historia-clinica/${historiaClinicaId}`).then((r) => r.data.data)
+
+export const listarAtencionesPorDni = (dniPaciente) =>
+  client.get(`/api/v1/hce/consulta/atenciones/dni/${dniPaciente}`).then((r) => r.data.data)

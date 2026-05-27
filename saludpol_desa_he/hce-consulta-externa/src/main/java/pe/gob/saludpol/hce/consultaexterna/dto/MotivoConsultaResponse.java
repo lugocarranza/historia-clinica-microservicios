@@ -3,6 +3,7 @@ package pe.gob.saludpol.hce.consultaexterna.dto;
 public record MotivoConsultaResponse(
         Long id,
         Long atencionId,
+        String oapEpisodio,
         String motivo,
         String tiempoEnfermedad,
         String formaInicio,

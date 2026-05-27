@@ -15,7 +15,11 @@ public interface AtencionRepository extends JpaRepository<Atencion, Long> {
 
     List<Atencion> findByAdmisionIdAndTipoAtencionOrderByFechaAtencionDesc(Long admisionId, String tipoAtencion);
 
-    List<Atencion> findByHistoriaClinicaIdOrderByFechaAtencionDesc(Long historiaClinicaId);
-
     boolean existsByAdmisionIdAndTipoAtencionAndEstado(Long admisionId, String tipoAtencion, String estado);
+
+    List<Atencion> findByDniPacienteOrderByFechaAtencionDesc(String dniPaciente);
+
+    List<Atencion> findByCeAtencionIdAndTipoAtencionOrderByFechaAtencionDesc(Long ceAtencionId, String tipoAtencion);
+
+    boolean existsByCeAtencionIdAndTipoAtencionAndEstado(Long ceAtencionId, String tipoAtencion, String estado);
 }

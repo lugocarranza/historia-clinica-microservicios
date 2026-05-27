@@ -35,9 +35,11 @@ export default function VitalsGrid({
           />
         </FormField>
       ))}
-      <FormField label="IMC (kg/m²)">
-        <Input readOnly value={imcValue} placeholder="-" />
-      </FormField>
+      {imcValue !== undefined && (
+        <FormField label="IMC (kg/m²)">
+          <Input readOnly value={imcValue} placeholder="-" />
+        </FormField>
+      )}
     </div>
   )
 }

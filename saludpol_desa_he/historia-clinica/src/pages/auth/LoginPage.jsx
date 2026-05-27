@@ -16,7 +16,8 @@ export default function LoginPage() {
   const { mutate, isPending } = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
-      setAuth(data.token, data)
+      const { token, ...userData } = data
+      setAuth(token, userData)
       navigate('/', { replace: true })
     },
     onError: (error) => setError(error.response?.data?.message || 'Usuario o contraseña incorrectos'),

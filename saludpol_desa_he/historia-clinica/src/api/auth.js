@@ -37,6 +37,7 @@ const obtenerPerfilPostLogin = async (token) => {
       apellidoMaterno: userData?.apellidoMaterno || '',
       roles: userData?.roles || [],
       ipress: userData?.ipress || [],
+      dni: tokenData.sub || '',
     }
   } catch (e) {
     console.error(e)

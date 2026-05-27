@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useToast } from '@/hooks/useToast'
 import { calcEdad, formatDate, toDateTimeLocal } from '@/utils/date'
 import styles from './AdmisionPage.module.css'
+import { ESPECIALIDADES } from '@/constants/especialidades'
 
 const TIPOS_BENEFICIO = [
   'Atención Ambulatoria', 'Atención Maternidad', 'Atención Preventivo Promocional',
@@ -24,11 +25,6 @@ const TIPOS_BENEFICIO = [
 const PROFESIONES = [
   'Médico', 'Odontólogo', 'Químico Farmacéutico', 'Obstetra',
   'Enfermero(a)', 'Biólogo', 'Psicólogo', 'Nutricionista', 'Asistente Social',
-]
-
-const ESPECIALIDADES = [
-  'Medicina General', 'Pediatría', 'Ginecología', 'Cardiología',
-  'Traumatología', 'Neurología', 'Psicología', 'Dermatología', 'Oftalmología',
 ]
 
 const TIPOS_SEGURO = ['SALUDPOL', 'EPS', 'SIS']
@@ -376,7 +372,7 @@ export default function AdmisionPage() {
             <div className={styles.searchRow}>
               <FormField label="Documento de Identidad (DNI)" required>
                 <div className={styles.searchField}>
-                  <div style={{ minWidth: 277 }}>
+                  <div className={styles.dniFieldWrap}>
                     <Input
                       value={dni}
                       onChange={(e) => setDni(limpiarDni(e.target.value))}

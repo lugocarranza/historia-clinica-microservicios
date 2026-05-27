@@ -7,19 +7,19 @@ import {
 } from '@/api/consultaControl'
 import { useResumenResource, useSaveResource } from '@/hooks/consultaShared'
 
-export function useListarConsultasCS(admisionId) {
+export function useListarConsultasCS(ceAtencionId) {
   return useQuery({
-    queryKey: ['cs-lista', admisionId],
-    queryFn: () => listarConsultasCS(admisionId),
-    enabled: !!admisionId,
+    queryKey: ['cs-lista', ceAtencionId],
+    queryFn: () => listarConsultasCS(ceAtencionId),
+    enabled: !!ceAtencionId,
   })
 }
 
-export function useIniciarConsultaControl(admisionId) {
+export function useIniciarConsultaControl(ceAtencionId) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => iniciarConsultaControl(admisionId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cs-lista', admisionId] }),
+    mutationFn: (data) => iniciarConsultaControl(ceAtencionId, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cs-lista', ceAtencionId] }),
   })
 }
 

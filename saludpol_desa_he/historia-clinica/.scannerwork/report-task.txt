@@ -2,5 +2,5 @@ projectKey=HCE-FRONTEND
 serverUrl=http://localhost:9000
 serverVersion=26.4.0.121862
 dashboardUrl=http://localhost:9000/dashboard?id=HCE-FRONTEND
-ceTaskId=7e6c2e05-2bcf-492c-a83f-c34b0a271ebb
-ceTaskUrl=http://localhost:9000/api/ce/task?id=7e6c2e05-2bcf-492c-a83f-c34b0a271ebb
+ceTaskId=2e76f6f2-7664-4424-803a-6922388f308e
+ceTaskUrl=http://localhost:9000/api/ce/task?id=2e76f6f2-7664-4424-803a-6922388f308e

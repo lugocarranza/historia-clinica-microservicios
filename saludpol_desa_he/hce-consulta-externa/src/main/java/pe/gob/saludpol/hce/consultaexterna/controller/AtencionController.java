@@ -18,11 +18,11 @@ public class AtencionController {
 
     private final AtencionRepository atencionRepository;
 
-    @GetMapping("/historia-clinica/{historiaClinicaId}")
-    public ResponseEntity<ApiResponse<List<AtencionResponse>>> listarPorHistoria(
-            @PathVariable Long historiaClinicaId) {
+    @GetMapping("/dni/{dniPaciente}")
+    public ResponseEntity<ApiResponse<List<AtencionResponse>>> listarPorDni(
+            @PathVariable String dniPaciente) {
         List<AtencionResponse> result = atencionRepository
-                .findByHistoriaClinicaIdOrderByFechaAtencionDesc(historiaClinicaId)
+                .findByDniPacienteOrderByFechaAtencionDesc(dniPaciente)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -33,11 +33,11 @@ public class AtencionController {
         return new AtencionResponse(
                 a.getId(),
                 a.getAdmisionId(),
-                a.getHistoriaClinicaId(),
                 a.getTipoAtencion(),
                 a.getFechaAtencion(),
-                null,
-                null,
+                a.getServicio(),
+                a.getDniPaciente(),
+                a.getCeAtencionId(),
                 a.getEstado(),
                 a.getCreatedAt());
     }

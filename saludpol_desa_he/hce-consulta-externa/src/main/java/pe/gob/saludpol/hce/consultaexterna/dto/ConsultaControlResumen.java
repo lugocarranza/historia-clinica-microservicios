@@ -12,5 +12,6 @@ public record ConsultaControlResumen(
         List<ListaProblemaDto> listaProblemas,
         List<DiagnosticoDto> diagnosticos,
         PlanControlDto planControl,
+        List<SolicitudApoyoDto> solicitudesApoyo,
         DecisionControlDto decisionControl
 ) {}

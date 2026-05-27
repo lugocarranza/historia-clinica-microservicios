@@ -1,0 +1,64 @@
+# ====================================================================
+# .gitignore unificado para SaludPol (Monorepo Backend + Frontend)
+# ====================================================================
+
+# --------------------------------------------------------------------
+# BACKEND - Java / Spring Boot (api-gateway, api-eureka, hce-filiacion, etc.)
+# --------------------------------------------------------------------
+# Ignorar la carpeta de compilación de Maven
+**/target/
+
+# Archivos temporales de compilación y empaquetado
+*.egg
+*.jar
+*.war
+*.ear
+
+# --------------------------------------------------------------------
+# FRONTEND - React / Node.js (historia-clinica)
+# --------------------------------------------------------------------
+# Ignorar las dependencias instaladas (pesan mucho y se recuperan con npm install)
+**/node_modules/
+
+# Carpetas de producción / compilación de React (Vite usa 'dist', Create React App usa 'build')
+**/dist/
+**/build/
+
+# Bitácoras de errores de Node
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.pnpm-debug.log*
+
+# --------------------------------------------------------------------
+# HERRAMIENTAS DE DESARROLLO (IDEs y Editores de código)
+# --------------------------------------------------------------------
+# Visual Studio Code (Ignora tanto en la raíz como en subcarpetas)
+**/.vscode/
+**/*.code-workspace
+
+# IntelliJ IDEA o Spring Tool Suite / Eclipse
+**/.idea/
+**/*.iws
+**/*.iml
+**/*.ipr
+**/.classpath
+**/.project
+**/.settings/
+**/.factorypath
+
+# Archivos temporales del sistema operativo y configuraciones locales
+**/.DS_Store
+**/Thumbs.db
+**/*.ini
+**/desktop.ini
+
+# --------------------------------------------------------------------
+# CONFIGURACIONES SENSIBLES / VARIABLES DE ENTORNO
+# --------------------------------------------------------------------
+# Archivos que contienen contraseñas o credenciales locales (¡DESCOMENTADOS PARA SEGURIDAD!)
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local

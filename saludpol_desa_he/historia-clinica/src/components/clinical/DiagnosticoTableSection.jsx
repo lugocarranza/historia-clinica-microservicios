@@ -45,6 +45,8 @@ export default function DiagnosticoTableSection({
   searchMinLength = 1,
   searchLimit,
   dedupeNormalizedQuery = false,
+  showCaseColumn = true,
+  showProblemColumn = true,
 }) {
   const [lookupState, setLookupState] = useState({})
   const [descriptionOptions, setDescriptionOptions] = useState({})
@@ -165,8 +167,8 @@ export default function DiagnosticoTableSection({
                 <th style={{ width: headers.codeWidth }}>{headers.code}</th>
                 <th>{headers.description}</th>
                 <th style={{ width: headers.typeWidth }}>{headers.type}</th>
-                <th style={{ width: headers.caseWidth }}>{headers.case}</th>
-                <th style={{ width: headers.problemWidth }}>{headers.problem}</th>
+                {showCaseColumn && <th style={{ width: headers.caseWidth }}>{headers.case}</th>}
+                {showProblemColumn && <th style={{ width: headers.problemWidth }}>{headers.problem}</th>}
                 <th style={{ width: 44 }}></th>
               </tr>
             </thead>
@@ -286,46 +288,50 @@ export default function DiagnosticoTableSection({
                           </Select>
                         </FormField>
                       </td>
-                      <td>
-                        <FormField error={rowErrors?.caso?.message}>
-                          <Select
-                            {...register(getPath(index, 'caso'))}
-                            disabled={isReadOnly}
-                            style={inputCellStyle}
-                          >
-                            {['Nuevo', 'Repetido'].map((option) => (
-                              <option key={option}>{option}</option>
-                            ))}
-                          </Select>
-                        </FormField>
-                      </td>
-                      <td>
-                        <FormField error={rowErrors?.nroProblemAsoc?.message}>
-                          {problemField.kind === 'select' ? (
+                      {showCaseColumn && (
+                        <td>
+                          <FormField error={rowErrors?.caso?.message}>
                             <Select
-                              {...register(getPath(index, 'nroProblemAsoc'), problemField.rules)}
+                              {...register(getPath(index, 'caso'))}
                               disabled={isReadOnly}
                               style={inputCellStyle}
                             >
-                              {problemField.options.map((option) => (
-                                <option key={option} value={String(option)}>
-                                  {option}
-                                </option>
+                              {['Nuevo', 'Repetido'].map((option) => (
+                                <option key={option}>{option}</option>
                               ))}
                             </Select>
-                          ) : (
-                            <Input
-                              {...register(getPath(index, 'nroProblemAsoc'), problemField.rules)}
-                              placeholder="N°"
-                              type="number"
-                              min={problemField.min}
-                              max={problemField.max}
-                              disabled={isReadOnly}
-                              style={inputCellStyle}
-                            />
-                          )}
-                        </FormField>
-                      </td>
+                          </FormField>
+                        </td>
+                      )}
+                      {showProblemColumn && (
+                        <td>
+                          <FormField error={rowErrors?.nroProblemAsoc?.message}>
+                            {problemField.kind === 'select' ? (
+                              <Select
+                                {...register(getPath(index, 'nroProblemAsoc'), problemField.rules)}
+                                disabled={isReadOnly}
+                                style={inputCellStyle}
+                              >
+                                {problemField.options.map((option) => (
+                                  <option key={option} value={String(option)}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </Select>
+                            ) : (
+                              <Input
+                                {...register(getPath(index, 'nroProblemAsoc'), problemField.rules)}
+                                placeholder="N°"
+                                type="number"
+                                min={problemField.min}
+                                max={problemField.max}
+                                disabled={isReadOnly}
+                                style={inputCellStyle}
+                              />
+                            )}
+                          </FormField>
+                        </td>
+                      )}
                       <td>
                         {!getValues(getPath(index, 'id')) && (
                           <Button
@@ -403,4 +409,6 @@ DiagnosticoTableSection.propTypes = {
   searchMinLength: PropTypes.number,
   searchLimit: PropTypes.number,
   dedupeNormalizedQuery: PropTypes.bool,
+  showCaseColumn: PropTypes.bool,
+  showProblemColumn: PropTypes.bool,
 }

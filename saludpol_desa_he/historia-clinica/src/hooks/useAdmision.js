@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
-import { registrarAdmision, obtenerHcPorDni, listarAtenciones, buscarAdmisiones } from '@/api/admision'
+import { registrarAdmision, obtenerHcPorDni, listarAtenciones, listarAtencionesPorDni, buscarAdmisiones } from '@/api/admision'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 
 export function useRegistrarAdmision(options) {
@@ -20,6 +20,14 @@ export function useListarAtenciones(historiaClinicaId) {
     queryKey: ['atenciones', historiaClinicaId],
     queryFn: () => listarAtenciones(historiaClinicaId),
     enabled: !!historiaClinicaId,
+  })
+}
+
+export function useListarAtencionesPorDni(dniPaciente) {
+  return useQuery({
+    queryKey: ['atenciones-dni', dniPaciente],
+    queryFn: () => listarAtencionesPorDni(dniPaciente),
+    enabled: !!dniPaciente,
   })
 }
 

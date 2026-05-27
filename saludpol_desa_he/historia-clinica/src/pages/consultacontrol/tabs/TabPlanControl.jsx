@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { Controller, useForm, useFieldArray } from 'react-hook-form'
+import { Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardBody } from '@/components/ui/Card'
-import { Input, Textarea } from '@/components/ui/Input'
+import { Input, Select, Textarea } from '@/components/ui/Input'
 import FormField from '@/components/ui/FormField'
 import Button from '@/components/ui/Button'
 import MedicationTableSection from '@/components/clinical/MedicationTableSection'
+import SolicitudApoyoCascade from '@/components/clinical/SolicitudApoyoCascade'
 import { todayDateInput } from '@/utils/date'
 
 const newMed = () => ({
@@ -19,8 +21,26 @@ const newMed = () => ({
   conducta: 'Mantener',
 })
 
+const newSolicitud = () => ({
+  id: null,
+  idSubTipoParent: '',
+  idSubTipoUltimo: '',
+  tipo: '',
+  descripcion: '',
+  codigoCpms: '',
+  codigoSegus: '',
+  prioridad: 'Normal',
+  observaciones: '',
+})
+
 const MAX_LENGTHS = {
   farmaco: 200,
+}
+
+const prioridadColor = (p) => {
+  if (p === 'Urgente') return '#fff3e8'
+  if (p === 'Emergencia') return '#fdeef0'
+  return 'white'
 }
 
 const getDefaultValues = (data) => {
@@ -35,8 +55,21 @@ const getDefaultValues = (data) => {
     conducta: item?.conducta || 'Mantener',
   }))
 
+  const solicitudes = (data?.solicitudesApoyo || []).map((item) => ({
+    id: item?.id ?? null,
+    idSubTipoParent: item?.idSubTipoParent || '',
+    idSubTipoUltimo: item?.idSubTipoUltimo || '',
+    tipo: item?.tipo || '',
+    descripcion: item?.descripcion || '',
+    codigoCpms: item?.codigoCpms || '',
+    codigoSegus: item?.codigoSegus || '',
+    prioridad: item?.prioridad || 'Normal',
+    observaciones: item?.observaciones || '',
+  }))
+
   return {
     medicacion: rows.length ? rows : [newMed()],
+    solicitudesApoyo: solicitudes.length ? solicitudes : [newSolicitud()],
     plan: {
       proximaCita: data?.proximaCita || '',
       indicaciones: data?.indicaciones || '',
@@ -63,6 +96,7 @@ export default function TabPlanControl({ onSave, saves, initialData, isReadOnly 
     setError,
     clearErrors,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     mode: 'onBlur',
@@ -70,17 +104,19 @@ export default function TabPlanControl({ onSave, saves, initialData, isReadOnly 
     defaultValues: getDefaultValues(null),
   })
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'medicacion',
-  })
+  const { fields, append, remove } = useFieldArray({ control, name: 'medicacion' })
+  const { fields: solicitudFields, append: appendSolicitud, remove: removeSolicitud } = useFieldArray({ control, name: 'solicitudesApoyo' })
 
   useEffect(() => {
     reset(getDefaultValues(initialData))
   }, [initialData, reset])
 
   const onSubmit = (data) => {
-    onSave(saves.savePlanControl, { medicacion: data.medicacion, ...data.plan })
+    onSave(saves.savePlanControl, {
+      medicacion: data.medicacion,
+      solicitudesApoyo: data.solicitudesApoyo,
+      ...data.plan,
+    })
   }
 
   return (
@@ -149,6 +185,64 @@ export default function TabPlanControl({ onSave, saves, initialData, isReadOnly 
         }}
         addButtonLabel="+ Agregar Medicamento"
       />
+
+      <Card allowOverflow>
+        <CardHeader title="Solicitudes de Apoyo Diagnóstico" />
+        <CardBody>
+          {solicitudFields.map((field, i) => {
+            const prioridad = watch(`solicitudesApoyo.${i}.prioridad`)
+            return (
+              <div key={field.id} style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: 10, marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Solicitud {i + 1}</span>
+                  {!getValues(`solicitudesApoyo.${i}.id`) && !isReadOnly && (
+                    <Button variant="danger" size="xs" type="button" onClick={() => removeSolicitud(i)}>
+                      <Trash2 size={12} />
+                    </Button>
+                  )}
+                </div>
+                <FormField label="Tipo / Procedimiento">
+                  <Controller
+                    control={control}
+                    name={`solicitudesApoyo.${i}`}
+                    render={({ field: { value, onChange } }) => (
+                      <SolicitudApoyoCascade
+                        value={value}
+                        onChange={(newVal) => onChange({ ...value, ...newVal })}
+                        isReadOnly={isReadOnly}
+                      />
+                    )}
+                  />
+                </FormField>
+                <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 10, marginTop: 8 }}>
+                  <FormField label="Prioridad">
+                    <Select
+                      {...register(`solicitudesApoyo.${i}.prioridad`)}
+                      disabled={isReadOnly}
+                      style={{ background: prioridadColor(prioridad), fontWeight: 600, padding: '4px 7px', fontSize: 13 }}
+                    >
+                      {['Normal', 'Urgente', 'Emergencia'].map((o) => <option key={o}>{o}</option>)}
+                    </Select>
+                  </FormField>
+                  <FormField label="Observaciones">
+                    <Input
+                      {...register(`solicitudesApoyo.${i}.observaciones`, {
+                        maxLength: { value: 500, message: 'Las observaciones no deben superar 500 caracteres' },
+                      })}
+                      maxLength={500}
+                      disabled={isReadOnly}
+                      style={{ padding: '4px 7px', fontSize: 13 }}
+                    />
+                  </FormField>
+                </div>
+              </div>
+            )
+          })}
+          <Button variant="secondary" size="xs" type="button" disabled={isReadOnly} onClick={() => appendSolicitud(newSolicitud())}>
+            + Agregar Solicitud
+          </Button>
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader title="Seguimiento y Criterios de Alarma" />

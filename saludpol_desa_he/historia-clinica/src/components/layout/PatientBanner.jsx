@@ -43,19 +43,13 @@ export default function PatientBanner({ paciente, nroHc, tipoConsulta }) {
           )}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div className="pb-meta">
         <div className="pb-hc">
           <div className="pb-hc-label">Nº Historia Clínica</div>
           <div className="pb-hc-value">{nroHc || '—'}</div>
         </div>
         {tipoConsulta && (
-          <div style={{
-            background: 'rgba(255,165,0,.15)',
-            border: '1px solid rgba(255,165,0,.35)',
-            borderRadius: 6,
-            padding: '8px 14px',
-            textAlign: 'right',
-          }}>
+          <div className="pb-tipo">
             <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Tipo</div>
             <div style={{ fontSize: 12.5, color: '#FFD580', fontWeight: 700, marginTop: 2 }}>{tipoConsulta}</div>
           </div>

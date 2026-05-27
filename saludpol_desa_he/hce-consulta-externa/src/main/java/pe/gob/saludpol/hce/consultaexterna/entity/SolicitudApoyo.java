@@ -23,7 +23,7 @@ public class SolicitudApoyo extends AuditableEntity {
     @JoinColumn(name = "I_ATENCION_ID", nullable = false)
     private Atencion atencion;
 
-    @Column(name = "V_TIPO", nullable = false, length = 20)
+    @Column(name = "V_TIPO", nullable = false, length = 100)
     private String tipo;
 
     @Column(name = "V_DESCRIPCION", nullable = false, length = 300)
@@ -37,4 +37,16 @@ public class SolicitudApoyo extends AuditableEntity {
 
     @Column(name = "V_ESTADO", nullable = false, length = 20)
     private String estado = "PENDIENTE";
+
+    @Column(name = "V_ID_SUBTIPO_PARENT", length = 20)
+    private String idSubTipoParent;
+
+    @Column(name = "V_ID_SUBTIPO_ULTIMO", length = 20)
+    private String idSubTipoUltimo;
+
+    @Column(name = "V_CODIGO_CPMS", length = 30)
+    private String codigoCpms;
+
+    @Column(name = "V_CODIGO_SEGUS", length = 30)
+    private String codigoSegus;
 }

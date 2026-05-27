@@ -6,24 +6,35 @@ import { Input } from '@/components/ui/Input'
 import FormField from '@/components/ui/FormField'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { useIpressFromUser } from '@/hooks/useIpressFromUser'
+import { useAuthStore } from '@/store/authStore'
+import { useProfesionalSalud } from '@/hooks/useProfesionalSalud'
 
 const OPCIONES = ['Alta', 'Continúa seguimiento de control ambulatorio', 'Referencia', 'Hospitalización']
 
-const getDefaultValues = (data) => ({
+const buildProfNombres = (user) => {
+  if (!user) return ''
+  return `${user.apellidoPaterno || ''} ${user.apellidoMaterno || ''} ${user.nombres || ''}`.trim().toUpperCase()
+}
+
+const getDefaultValues = (data, user, ipressData, profesional) => ({
   decision: data?.decision || 'Continúa seguimiento de control ambulatorio',
   refPnpIpress: data?.refPnpIpress || '',
   refPnpMotivo: data?.refPnpMotivo || '',
   refNopnpIpress: data?.refNopnpIpress || '',
   refNopnpMotivo: data?.refNopnpMotivo || '',
-  profNombres: data?.profNombres || '',
-  profDocIdent: data?.profDocIdent || '',
-  profColegiatura: data?.profColegiatura || '',
-  profRegEspecialidad: data?.profRegEspecialidad || '',
-  fechaCierre: data?.fechaCierre || new Date().toISOString().slice(0, 16),
+  profNombres: data?.profNombres || buildProfNombres(user),
+  profDocIdent: data?.profDocIdent || user?.dni || '',
+  profColegiatura: data?.profColegiatura || profesional?.numeroColegiatura || '',
+  profRegEspecialidad: data?.profRegEspecialidad || profesional?.rne || '',
+  ipressCui: data?.ipressCui || ipressData?.ipressCui || '',
 })
 
 export default function TabDecisionControl({ onSave, saves, initialData, isReadOnly = false }) {
   const [pendingData, setPendingData] = useState(null)
+  const { user } = useAuthStore()
+  const ipressData = useIpressFromUser()
+  const { data: profesionalData } = useProfesionalSalud()
 
   const {
     register,
@@ -34,12 +45,12 @@ export default function TabDecisionControl({ onSave, saves, initialData, isReadO
   } = useForm({
     mode: 'onBlur',
     reValidateMode: 'onChange',
-    defaultValues: getDefaultValues(null),
+    defaultValues: getDefaultValues(null, null, null),
   })
 
   useEffect(() => {
-    reset(getDefaultValues(initialData))
-  }, [initialData, reset])
+    reset(getDefaultValues(initialData, user, ipressData, profesionalData))
+  }, [initialData, user, ipressData, profesionalData, reset])
 
   const decision = watch('decision')
   const decisionRegister = register('decision', {
@@ -165,7 +176,7 @@ export default function TabDecisionControl({ onSave, saves, initialData, isReadO
         <div style={{ fontWeight: 700, fontSize: 12.5, color: '#166534', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>Profesional Tratante</div>
         <div className="form-grid g3" style={{ gap: 10 }}>
           <div style={{ gridColumn: '1/3' }}>
-            <FormField label="Nombres y Apellidos" error={errors.profNombres?.message}>
+            <FormField label="Nombres y Apellidos" error={errors.profNombres?.message} required>
               <Input
                 {...register('profNombres', {
                   required: 'El nombre del profesional es requerido',
@@ -173,43 +184,31 @@ export default function TabDecisionControl({ onSave, saves, initialData, isReadO
                     value: 70,
                     message: 'El nombre del profesional no debe superar 70 caracteres',
                   },
-                  pattern: {
-                    value: /^[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]+$/,
-                    message: 'El nombre solo puede contener letras y espacios',
-                  },
-                  onChange: (e) => {
-                    e.target.value = e.target.value.replaceAll(/[^A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]/g, '')
-                  },
                 })}
                 maxLength={70}
                 placeholder="Apellidos y Nombres completos"
-                disabled={isReadOnly}
+                disabled
               />
             </FormField>
           </div>
-          <FormField label="Doc. de Identidad" error={errors.profDocIdent?.message}>
+          <FormField label="Doc. de Identidad" error={errors.profDocIdent?.message} required>
             <Input
               {...profDocIdentRegister}
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={8}
               placeholder="DNI"
-              disabled={isReadOnly}
-              onChange={(event) => {
-                const soloDigitos = event.target.value.replaceAll(/\D/g, '').slice(0, 8)
-                event.target.value = soloDigitos
-                profDocIdentRegister.onChange(event)
-              }}
+              disabled
             />
           </FormField>
-          <FormField label="N° Colegiatura" error={errors.profColegiatura?.message}>
+          <FormField label="N° Colegiatura" error={errors.profColegiatura?.message} required>
             <Input
               {...profColegiaturaRegister}
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={6}
               placeholder="000000"
-              disabled={isReadOnly}
+              disabled={isReadOnly || !!profesionalData}
               onChange={(event) => {
                 const soloDigitos = event.target.value.replaceAll(/\D/g, '').slice(0, 8)
                 event.target.value = soloDigitos
@@ -217,14 +216,14 @@ export default function TabDecisionControl({ onSave, saves, initialData, isReadO
               }}
             />
           </FormField>
-          <FormField label="Registro Especialidad" error={errors.profRegEspecialidad?.message}>
+          <FormField label="Registro Especialidad" error={errors.profRegEspecialidad?.message} required>
             <Input
               {...profRegEspecialidadRegister}
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={5}
               placeholder="00000"
-              disabled={isReadOnly}
+              disabled={isReadOnly || !!profesionalData}
               onChange={(event) => {
                 const soloDigitos = event.target.value.replaceAll(/\D/g, '').slice(0, 8)
                 event.target.value = soloDigitos
@@ -232,14 +231,8 @@ export default function TabDecisionControl({ onSave, saves, initialData, isReadO
               }}
             />
           </FormField>
-          <FormField label="Fecha y Hora de Cierre" error={errors.fechaCierre?.message}>
-            <Input
-              type="datetime-local"
-              {...register('fechaCierre', {
-                required: 'La fecha de cierre es requerida',
-              })}
-              disabled={isReadOnly}
-            />
+          <FormField label="CUI IPRESS" hidden>
+            <Input {...register('ipressCui')} disabled placeholder="Cargando..." />
           </FormField>
         </div>
       </div>

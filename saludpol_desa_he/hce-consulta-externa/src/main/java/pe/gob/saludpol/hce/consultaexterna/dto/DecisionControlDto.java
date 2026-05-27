@@ -4,8 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-import java.time.LocalDateTime;
-
 public record DecisionControlDto(
         @NotBlank(message = "La decision clinica es requerida")
         @Size(max = 60, message = "La decision clinica no debe superar 60 caracteres")
@@ -35,5 +33,8 @@ public record DecisionControlDto(
         @Pattern(regexp = "^\\d*$", message = "El registro de especialidad debe contener solo numeros")
         @Size(max = 5, message = "El registro de especialidad no debe superar 5 caracteres")
         String profRegEspecialidad,
-        LocalDateTime fechaCierre
+
+        @Size(max = 20)
+        @Pattern(regexp = "^\\d*$", message = "El codigo CUI de la IPRESS solo debe contener numeros")
+        String ipressCui
 ) {}

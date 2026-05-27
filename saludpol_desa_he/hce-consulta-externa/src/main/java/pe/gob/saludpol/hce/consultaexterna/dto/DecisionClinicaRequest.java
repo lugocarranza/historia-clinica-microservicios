@@ -2,7 +2,6 @@ package pe.gob.saludpol.hce.consultaexterna.dto;
 
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -15,7 +14,6 @@ public record DecisionClinicaRequest(
                  message = "La decisión de alta no es válida", flags = Pattern.Flag.CANON_EQ)
         String decisionAlta,
 
-        @NotNull(message = "La fecha de proxima cita es obligatoria")
         @FutureOrPresent(message = "La fecha de proxima cita no puede ser una fecha pasada")
         LocalDate fechaProximaCita,
 
@@ -44,5 +42,9 @@ public record DecisionClinicaRequest(
         @NotBlank(message = "El CMP del medico es obligatorio")
         @Pattern(regexp = "\\d*", message = "El CMP del medico debe contener solo numeros")
         @Size(max = 6, message = "El CMP del medico no debe superar 6 caracteres")
-        String medicoCmp
+        String medicoCmp,
+
+        @Size(max = 20)
+        @Pattern(regexp = "^\\d*$", message = "El codigo CUI de la IPRESS solo debe contener numeros")
+        String ipressCui
 ) {}

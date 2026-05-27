@@ -7,6 +7,7 @@ import AdmisionPage from '@/pages/admision/AdmisionPage'
 import ConsultaExternaPage from '@/pages/consultaexterna/ConsultaExternaPage'
 import ConsultaControlPage from '@/pages/consultacontrol/ConsultaControlPage'
 import StubPage from '@/pages/stub/StubPage'
+import EmergenciaPage from '@/pages/emergencia/EmergenciaPage'
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore((s) => s.token)
@@ -27,7 +28,7 @@ const router = createBrowserRouter([
       { path: 'admision', element: <AdmisionPage /> },
       { path: 'consulta-externa', element: <ConsultaExternaPage /> },
       { path: 'consulta-control', element: <ConsultaControlPage /> },
-      { path: 'emergencia', element: <StubPage nombre="Emergencia" /> },
+      { path: 'emergencia', element: <EmergenciaPage /> },
       { path: 'hospitalizacion', element: <StubPage nombre="Hospitalización" /> },
       { path: 'farmacia', element: <StubPage nombre="Farmacia" /> },
       { path: 'laboratorio', element: <StubPage nombre="Laboratorio" /> },

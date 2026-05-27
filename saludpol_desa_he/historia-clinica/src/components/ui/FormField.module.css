@@ -28,3 +28,7 @@
   color: var(--c-red);
   font-weight: 500;
 }
+
+.hidden {
+  display: none;
+}

@@ -24,14 +24,24 @@ public class Atencion extends AuditableEntity {
     @Column(name = "I_ADMISION_ID", nullable = false)
     private Long admisionId;
 
-    @Column(name = "I_HISTORIA_CLINICA_ID", nullable = false)
-    private Long historiaClinicaId;
-
     @Column(name = "V_TIPO_ATENCION", nullable = false, length = 30)
     private String tipoAtencion;
 
     @Column(name = "T_FECHA_ATENCION", nullable = false)
     private LocalDateTime fechaAtencion;
+
     @Column(name = "V_ESTADO", nullable = false, length = 20)
     private String estado = "ABIERTA";
+
+    @Column(name = "V_SERVICIO", length = 100)
+    private String servicio;
+
+    @Column(name = "V_DNI_PACIENTE", length = 12)
+    private String dniPaciente;
+
+    @Column(name = "I_CE_ATENCION_ID")
+    private Long ceAtencionId;
+
+    @Column(name = "V_IPRESS_CUI", length = 20)
+    private String ipressCui;
 }
