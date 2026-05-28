@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  ClipboardList, Stethoscope, RefreshCw, AlertCircle,
+  ClipboardList, Stethoscope, RefreshCw, FileText, AlertCircle,
   LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/admision', icon: ClipboardList, label: 'Filiación' },
   { to: '/consulta-externa', icon: Stethoscope, label: 'Consulta Externa' },
   { to: '/consulta-control', icon: RefreshCw, label: 'Control / Seguimiento' },
+  { to: '/orden-medica', icon: FileText, label: 'Orden Médica' },
   { to: '/emergencia', icon: AlertCircle, label: 'Emergencia' },
   // { to: '/hospitalizacion', icon: Hospital, label: 'Hospitalización' },
   // { to: '/farmacia', icon: Pill, label: 'Farmacia' },

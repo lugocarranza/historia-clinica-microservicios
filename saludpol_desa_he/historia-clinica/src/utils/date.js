@@ -2,13 +2,13 @@ import { format, differenceInYears, differenceInMonths, differenceInDays, addYea
 import { es } from 'date-fns/locale'
 
 export const formatDate = (date) => {
-  if (!date) return '—'
+  if (!date) return '-'
   const d = typeof date === 'string' ? parseISO(date) : date
   return format(d, 'dd/MM/yyyy')
 }
 
 export const formatDateTime = (date) => {
-  if (!date) return '—'
+  if (!date) return '-'
   const d = typeof date === 'string' ? parseISO(date) : date
   return format(d, 'dd/MM/yyyy HH:mm')
 }
@@ -20,7 +20,7 @@ export const todayDateInput = (date = new Date()) =>
   format(date, 'yyyy-MM-dd')
 
 export const calcEdad = (fechaNac) => {
-  if (!fechaNac) return '—'
+  if (!fechaNac) return '-'
   const d = typeof fechaNac === 'string' ? parseISO(fechaNac) : fechaNac
   const hoy = new Date()
   const anios = differenceInYears(hoy, d)
